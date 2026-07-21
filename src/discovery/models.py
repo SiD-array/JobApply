@@ -36,3 +36,5 @@ class SearchQuery:
     experience_levels: List[str] = field(default_factory=lambda: ["Entry Level", "Internship", "Associate"])
     target_companies: List[str] = field(default_factory=list)  # Specific company slugs for Greenhouse/Lever/Ashby
     limit_per_provider: int = 10
+    max_age_hours: Optional[int] = None
+

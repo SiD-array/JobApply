@@ -27,13 +27,15 @@ def main():
     parser.add_argument("--limit", type=int, default=5, help="Limit per provider")
     parser.add_argument("--webhook", default="http://localhost:5678/webhook/job-ingest", help="n8n Webhook URL")
     parser.add_argument("--output", default="samples/discovered_jobs.json", help="Save output JSON path")
+    parser.add_argument("--max-age-hours", type=int, help="Filter jobs posted within last X hours")
     args = parser.parse_args()
 
     engine = DiscoveryEngine()
     query = SearchQuery(
         keywords=args.keywords,
         location=args.location,
-        limit_per_provider=args.limit
+        limit_per_provider=args.limit,
+        max_age_hours=args.max_age_hours
     )
 
     jobs: List[Job] = engine.discover_jobs(query, active_providers=args.providers)
