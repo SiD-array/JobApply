@@ -275,9 +275,17 @@ def main():
     # Read profile data from file or stdin
     if args.profile:
         with open(args.profile, "r", encoding="utf-8") as f:
-            profile_data = json.load(f)
+            raw_data = json.load(f)
     else:
-        profile_data = json.load(sys.stdin)
+        raw_data = json.load(sys.stdin)
+
+    profile_data = raw_data.get("tailoredProfile", raw_data)
+
+    # Normalize key aliases (personal_info vs contact)
+    if "personal_info" not in profile_data and "contact" in profile_data:
+        profile_data["personal_info"] = profile_data["contact"]
+    elif "contact" not in profile_data and "personal_info" in profile_data:
+        profile_data["contact"] = profile_data["personal_info"]
 
     # Determine output path
     if args.output:
