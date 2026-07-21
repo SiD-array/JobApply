@@ -28,17 +28,59 @@ def main():
     parser.add_argument("--webhook", default="http://localhost:5678/webhook/job-ingest", help="n8n Webhook URL")
     parser.add_argument("--output", default="samples/discovered_jobs.json", help="Save output JSON path")
     parser.add_argument("--max-age-hours", type=int, help="Filter jobs posted within last X hours")
+    parser.add_argument("--target-passed", type=int, default=0, help="Loop/search until finding at least X jobs passing evaluation")
+    parser.add_argument("--profile", default="source_profile.json", help="Path to source candidate profile JSON")
     args = parser.parse_args()
 
     engine = DiscoveryEngine()
-    query = SearchQuery(
-        keywords=args.keywords,
-        location=args.location,
-        limit_per_provider=args.limit,
-        max_age_hours=args.max_age_hours
-    )
+    
+    # If target-passed is specified, we evaluate discovered jobs locally to filter out poor matches
+    profile_data = {}
+    if args.target_passed > 0:
+        from src.evaluator import AIEvaluator
+        evaluator = AIEvaluator(provider="groq")
+        with open(args.profile, "r", encoding="utf-8") as f:
+            profile_data = json.load(f)
 
-    jobs: List[Job] = engine.discover_jobs(query, active_providers=args.providers)
+    # Initial query limits
+    limit = args.limit
+    passed_jobs: List[Job] = []
+    attempts = 0
+
+    while attempts < 3:
+        query = SearchQuery(
+            keywords=args.keywords,
+            location=args.location,
+            limit_per_provider=limit,
+            max_age_hours=args.max_age_hours
+        )
+        discovered = engine.discover_jobs(query, active_providers=args.providers)
+        
+        if args.target_passed > 0:
+            print(f"\n[AI GATE] Evaluating {len(discovered)} discovered jobs to find {args.target_passed} matches...")
+            passed_jobs = []
+            for j in discovered:
+                # Convert Job object to dict
+                j_dict = j.to_dict()
+                res = evaluator.evaluate_job(profile_data, j_dict, threshold=70.0)
+                if res.get("passed"):
+                    passed_jobs.append(j)
+                    print(f"  + Match PASSED ({res.get('score')}%): {j.title} @ {j.company}")
+                if len(passed_jobs) >= args.target_passed:
+                    break
+            
+            print(f"[AI GATE] Found {len(passed_jobs)}/ {args.target_passed} passing jobs.")
+            if len(passed_jobs) >= args.target_passed:
+                jobs = passed_jobs
+                break
+            else:
+                # Double search limits and try again
+                limit *= 2
+                attempts += 1
+                print(f"⚠️ Did not reach target of {args.target_passed} passed jobs. Increasing batch size to {limit} per provider...")
+        else:
+            jobs = discovered
+            break
 
     # Convert to JSON dicts
     jobs_dict = [j.to_dict() for j in jobs]
