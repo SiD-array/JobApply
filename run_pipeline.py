@@ -58,12 +58,12 @@ def main():
 
     # 1. Stage 2: Fit Evaluation Gate
     print("\n--- STAGE 2: EVALUATION GATE ---")
-    eval_out = run_command(["evaluator.py", "--profile", "source_profile.json", "--job", job_file_path])
+    eval_script = os.path.join("src", "evaluator.py")
+    eval_out = run_command([eval_script, "--profile", "source_profile.json", "--job", job_file_path])
     eval_json = json.loads(eval_out)
     score = eval_json.get("score", 0.0)
     passed = eval_json.get("passed", False)
     print(f"📊 Fit Match Score: {score}% | Recommendation: {'PASS' if passed else 'REJECT'}")
-
 
     if not passed and not args.force_apply:
         print(f"❌ Match score {score}% is below threshold of 70%. Halting pipeline to save time & credits.")
@@ -73,25 +73,29 @@ def main():
     # 2. Stage 3: LLM Resume Tailoring
     print("\n--- STAGE 3: LLM RESUME TAILORING ---")
     tailored_json_path = os.path.join("output_resumes", "tailored_profile.json")
-    run_command(["tailor_llm.py", "--provider", args.provider, "--job", job_file_path, "--output", tailored_json_path])
+    tailor_script = os.path.join("src", "tailor_llm.py")
+    run_command([tailor_script, "--provider", args.provider, "--job", job_file_path, "--output", tailored_json_path])
 
     # 3. Stage 4: PDF Compilation
     print("\n--- STAGE 4: ATS PDF RESUME COMPILATION ---")
     output_pdf_path = os.path.join("output_resumes", "Siddharth_Bhople_Resume.pdf")
-    run_command(["generate_pdf.py", "--profile", tailored_json_path, "--job-id", "Siddharth_Bhople", "--output", output_pdf_path])
+    pdf_script = os.path.join("src", "generate_pdf.py")
+    run_command([pdf_script, "--profile", tailored_json_path, "--job-id", "Siddharth_Bhople", "--output", output_pdf_path])
     print(f"📄 ATS Resume compiled to: {os.path.abspath(output_pdf_path)}")
 
     # 4. Stage 5: Discord Notification
     print("\n--- STAGE 5: DISCORD HITL NOTIFICATION ---")
+    discord_script = os.path.join("src", "notify_discord.py")
     try:
-        run_command(["notify_discord.py", "--pdf", output_pdf_path, "--score", str(score), "--job", job_file_path])
+        run_command([discord_script, "--pdf", output_pdf_path, "--score", str(score), "--job", job_file_path])
     except Exception as e:
         print(f"⚠️ Discord notification warning: {e}")
 
     # 5. Stage 5: Playwright Auto-Fill Form & Review
     print("\n--- STAGE 5: PLAYWRIGHT ATS FORM AUTO-FILL ---")
     print("Launching Chromium browser to fill application inputs...")
-    run_command(["apply_playwright.py", "--url", args.url, "--profile", "source_profile.json", "--pdf", output_pdf_path])
+    apply_script = os.path.join("src", "apply_playwright.py")
+    run_command([apply_script, "--url", args.url, "--profile", "source_profile.json", "--pdf", output_pdf_path])
 
     print("\n✅ PIPELINE EXECUTION COMPLETE!")
 
