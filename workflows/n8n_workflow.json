@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "command": "python evaluator.py --profile source_profile.json"
+        "command": "=python src/evaluator.py --profile source_profile.json --job \"{{ JSON.stringify($json.body || $json) }}\""
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
@@ -52,27 +52,10 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "=https://api.groq.com/openai/v1/chat/completions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert ATS (Applicant Tracking System) optimizer and professional resume writer. You will receive candidate profile data (source_profile.json) and a job_description.\\n\\nSTRICT CONSTRAINTS:\\n- NEVER invent, fabricate, or exaggerate work experience, metrics, companies, titles, or dates.\\n- You may ONLY reorder, highlight, or rephrase bullet points from source_profile.json to emphasize relevance to the target job.\\n- Align technical terminology with keywords from the job description where factually accurate.\\n- Output MUST strictly adhere to the requested JSON structure. Output raw JSON ONLY.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Source Profile:\\n{{ JSON.stringify(require('./source_profile.json')) }}\\n\\nTarget Job Description:\\n{{ $('Stage 1: Job Discovery Webhook').item.json.description }}\"\n    }\n  ],\n  \"temperature\": 0.2,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"stream\": false\n}"
+        "command": "=python src/tailor_llm.py --provider groq --job \"{{ JSON.stringify($('Stage 1: Job Discovery Webhook').item.json.body || $('Stage 1: Job Discovery Webhook').item.json) }}\" --output \"output_resumes/tailored_{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}.json\""
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
       "position": [
         940,
         280
@@ -82,7 +65,7 @@
     },
     {
       "parameters": {
-        "command": "=python generate_pdf.py --job-id \"{{ $('Stage 1: Job Discovery Webhook').item.json.job_id }}\" --output \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id }}_Resume.pdf\""
+        "command": "=python src/generate_pdf.py --profile \"output_resumes/tailored_{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}.json\" --job-id \"{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}\" --output \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}_Resume.pdf\""
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
@@ -95,23 +78,10 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"username\": \"JobApply AI Assistant\",\n  \"embeds\": [\n    {\n      \"title\": \"🎯 New Matching Job Application Found!\",\n      \"color\": 3066993,\n      \"fields\": [\n        {\n          \"name\": \"🏢 Company\",\n          \"value\": \"{{ $('Stage 1: Job Discovery Webhook').item.json.company }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"💼 Title\",\n          \"value\": \"{{ $('Stage 1: Job Discovery Webhook').item.json.title }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"📊 Match Score\",\n          \"value\": \"**{{ JSON.parse($('Stage 2: Evaluation Gate (Python)').item.json.stdout).score }}%**\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"🔗 Apply URL\",\n          \"value\": \"{{ $('Stage 1: Job Discovery Webhook').item.json.apply_url }}\",\n          \"inline\": false\n        },\n        {\n          \"name\": \"📄 Tailored Resume PDF\",\n          \"value\": \"`output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id }}_Resume.pdf`\",\n          \"inline\": false\n        }\n      ]\n    }\n  ]\n}"
+        "command": "=python src/notify_discord.py --pdf \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}_Resume.pdf\" --score \"{{ JSON.parse($('Stage 2: Evaluation Gate (Python)').item.json.stdout).score }}\" --job \"{{ JSON.stringify($('Stage 1: Job Discovery Webhook').item.json.body || $('Stage 1: Job Discovery Webhook').item.json) }}\""
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
       "position": [
         1400,
         280
@@ -135,7 +105,7 @@
     },
     {
       "parameters": {
-        "command": "=python apply_playwright.py --url \"{{ $('Stage 1: Job Discovery Webhook').item.json.apply_url }}\" --pdf \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id }}_Resume.pdf\""
+        "command": "=python src/apply_playwright.py --url \"{{ $('Stage 1: Job Discovery Webhook').item.json.apply_url || $('Stage 1: Job Discovery Webhook').item.json.body.apply_url }}\" --profile \"output_resumes/tailored_{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}.json\" --pdf \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}_Resume.pdf\""
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
@@ -199,7 +169,7 @@
       "main": [
         [
           {
-            "node": "Stage 3: LLM Resume Tailoring",
+            "node": "Stage 3: LLM Resume Tailoring (Groq Llama 3.3 70B)",
             "type": "main",
             "index": 0
           }
@@ -213,7 +183,7 @@
         ]
       ]
     },
-    "Stage 3: LLM Resume Tailoring": {
+    "Stage 3: LLM Resume Tailoring (Groq Llama 3.3 70B)": {
       "main": [
         [
           {
@@ -228,14 +198,14 @@
       "main": [
         [
           {
-            "node": "Stage 5: Telegram HITL Notification",
+            "node": "Stage 5: Discord HITL Notification",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Stage 5: Telegram HITL Notification": {
+    "Stage 5: Discord HITL Notification": {
       "main": [
         [
           {

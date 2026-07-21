@@ -44,9 +44,18 @@ def send_discord_notification(webhook_url: str, job_info: dict, pdf_path: str, s
         "embeds": [embed]
     }
 
-    response = requests.post(webhook_url, json=payload)
+    # Send with multipart PDF attachment if file exists
+    if pdf_path and os.path.exists(pdf_path):
+        filename = os.path.basename(pdf_path)
+        with open(pdf_path, "rb") as f:
+            files = {"file": (filename, f, "application/pdf")}
+            data = {"payload_json": json.dumps(payload)}
+            response = requests.post(webhook_url, data=data, files=files)
+    else:
+        response = requests.post(webhook_url, json=payload)
+
     if response.status_code in (200, 204):
-        print("[DISCORD] Notification sent successfully!")
+        print("[DISCORD] Notification and PDF attachment sent successfully!")
         return True
     else:
         print(f"[DISCORD ERROR] Failed to send notification: {response.status_code} - {response.text}", file=sys.stderr)
