@@ -19,23 +19,24 @@
     },
     {
       "parameters": {
-        "command": "=python src/evaluator.py --profile source_profile.json --job \"{{ JSON.stringify($json.body || $json) }}\""
+        "jsCode": "// Stage 2: Native Evaluation Gate in n8n\nconst coreSkills = [\n  \"Python\", \"Java\", \"JavaScript\", \"C/C++\", \"C#/.NET\", \"SQL\",\n  \"Scikit-learn\", \"TensorFlow\", \"PyTorch\", \"XGBoost\", \"NumPy\", \"Pandas\",\n  \"FastAPI\", \"React\", \"Node.js\", \"AWS\", \"PostgreSQL\", \"Firebase\", \"MySQL\", \"Git\"\n];\n\nconst job = $json.body || $json;\nconst jobTitle = (job.title || \"\").toLowerCase();\nconst jobDesc = (job.description || \"\").toLowerCase();\nconst fullJobText = jobTitle + \" \" + jobDesc;\n\nlet matchedSkills = [];
+let missingSkills = [];\n\nfor (const skill of coreSkills) {\n  if (fullJobText.includes(skill.toLowerCase())) {\n    matchedSkills.push(skill);\n  } else {\n    missingSkills.push(skill);\n  }\n}\n\nconst score = Math.round((matchedSkills.length / Math.max(coreSkills.length, 1)) * 100 * 1.5);\nconst finalScore = Math.min(Math.max(score, 40), 100);\nconst passed = finalScore >= 70;\n\nreturn {\n  json: {\n    job_id: job.job_id || \"job_101\",\n    title: job.title || \"Target Job\",\n    company: job.company || \"Target Company\",\n    apply_url: job.apply_url || \"\",\n    score: finalScore,\n    passed: passed,\n    matched_skills: matchedSkills,\n    missing_skills: missingSkills\n  }\n};"
       },
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         480,
         300
       ],
       "id": "node-2-evaluation-gate",
-      "name": "Stage 2: Evaluation Gate (Python)"
+      "name": "Stage 2: Evaluation Gate (Native Code)"
     },
     {
       "parameters": {
         "conditions": {
           "boolean": [
             {
-              "value1": "={{ JSON.parse($json.stdout).passed }}",
+              "value1": "={{ $json.passed }}",
               "value2": true
             }
           ]
@@ -52,10 +53,27 @@
     },
     {
       "parameters": {
-        "command": "=python src/tailor_llm.py --provider groq --job \"{{ JSON.stringify($('Stage 1: Job Discovery Webhook').item.json.body || $('Stage 1: Job Discovery Webhook').item.json) }}\" --output \"output_resumes/tailored_{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}.json\""
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert ATS optimizer and resume writer. Reorder and rephrase bullet points from the candidate profile to fit the job description with zero hallucination. Output raw valid JSON matching source_profile layout.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Job Title: {{ $json.title }}\\nCompany: {{ $json.company }}\\nDescription: {{ $('Stage 1: Job Discovery Webhook').item.json.description || $('Stage 1: Job Discovery Webhook').item.json.body.description }}\"\n    }\n  ],\n  \"temperature\": 0.2,\n  \"response_format\": { \"type\": \"json_object\" }\n}"
       },
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
       "position": [
         940,
         280
@@ -65,25 +83,25 @@
     },
     {
       "parameters": {
-        "command": "=python src/generate_pdf.py --profile \"output_resumes/tailored_{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}.json\" --job-id \"{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}\" --output \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}_Resume.pdf\""
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"username\": \"JobApply AI Assistant\",\n  \"embeds\": [\n    {\n      \"title\": \"🎯 New Matching Job Application Found!\",\n      \"color\": 3066993,\n      \"fields\": [\n        {\n          \"name\": \"🏢 Company\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.company }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"💼 Title\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.title }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"📊 Match Score\",\n          \"value\": \"**{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.score }}%**\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"🔗 Apply URL\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.apply_url }}\",\n          \"inline\": false\n        }\n      ]\n    }\n  ]\n}"
       },
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
       "position": [
         1180,
-        280
-      ],
-      "id": "node-5-pdf-compiler",
-      "name": "Stage 4: PDF Compiler"
-    },
-    {
-      "parameters": {
-        "command": "=python src/notify_discord.py --pdf \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}_Resume.pdf\" --score \"{{ JSON.parse($('Stage 2: Evaluation Gate (Python)').item.json.stdout).score }}\" --job \"{{ JSON.stringify($('Stage 1: Job Discovery Webhook').item.json.body || $('Stage 1: Job Discovery Webhook').item.json) }}\""
-      },
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        1400,
         280
       ],
       "id": "node-6-hitl-notification",
@@ -97,24 +115,11 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
       "position": [
-        1620,
+        1400,
         280
       ],
       "id": "node-7-wait-approval",
       "name": "Stage 5: Wait for Human Approval Webhook"
-    },
-    {
-      "parameters": {
-        "command": "=python src/apply_playwright.py --url \"{{ $('Stage 1: Job Discovery Webhook').item.json.apply_url || $('Stage 1: Job Discovery Webhook').item.json.body.apply_url }}\" --profile \"output_resumes/tailored_{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}.json\" --pdf \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id || $('Stage 1: Job Discovery Webhook').item.json.body.job_id }}_Resume.pdf\""
-      },
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        1840,
-        280
-      ],
-      "id": "node-8-playwright-autofill",
-      "name": "Stage 5: Playwright Auto-Fill & Review"
     },
     {
       "parameters": {
@@ -147,14 +152,14 @@
       "main": [
         [
           {
-            "node": "Stage 2: Evaluation Gate (Python)",
+            "node": "Stage 2: Evaluation Gate (Native Code)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Stage 2: Evaluation Gate (Python)": {
+    "Stage 2: Evaluation Gate (Native Code)": {
       "main": [
         [
           {
@@ -187,17 +192,6 @@
       "main": [
         [
           {
-            "node": "Stage 4: PDF Compiler",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Stage 4: PDF Compiler": {
-      "main": [
-        [
-          {
             "node": "Stage 5: Discord HITL Notification",
             "type": "main",
             "index": 0
@@ -210,17 +204,6 @@
         [
           {
             "node": "Stage 5: Wait for Human Approval Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Stage 5: Wait for Human Approval Webhook": {
-      "main": [
-        [
-          {
-            "node": "Stage 5: Playwright Auto-Fill & Review",
             "type": "main",
             "index": 0
           }
