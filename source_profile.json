@@ -1,0 +1,128 @@
+{
+  "personal_info": {
+    "first_name": "Siddharth",
+    "last_name": "Bhople",
+    "email": "sid.work0403@gmail.com",
+    "phone": "585-625-8123",
+    "location": "Rochester, NY",
+    "linkedin": "https://linkedin.com/in/siddharth-bhople/",
+    "github": "https://github.com/SiD-array"
+  },
+  "summary": "AI Engineering Intern and Computer Science Master's student with extensive experience in machine learning pipelines, multi-agent systems, data processing, and cloud governance.",
+  "core_skills": [
+    "Python",
+    "Java",
+    "JavaScript",
+    "C/C++",
+    "C#/.NET",
+    "SQL",
+    "Scikit-learn",
+    "TensorFlow",
+    "PyTorch",
+    "XGBoost",
+    "NumPy",
+    "Pandas",
+    "FastAPI",
+    "React",
+    "Node.js",
+    "AWS",
+    "PostgreSQL",
+    "Firebase",
+    "MySQL",
+    "Git"
+  ],
+  "experience": [
+    {
+      "company": "BSH Hausgeräte GmbH (Bosch Group)",
+      "title": "DAAD RISE Professional Scholar AI Engineering Intern (Pre-Development)",
+      "location": "Berlin, Germany",
+      "start_date": "2026-05",
+      "end_date": "Present",
+      "bullet_points": [
+        "Engineered filtering and merge logic processing 1,000+ TDMS files (avg. 1.5GB each) across multi-campaign lab experiments, validating model performance to within +/-500g RMSE target.",
+        "Automated the TDMS processing pipeline in Python (Pandas, openpyxl), replacing 2 manual MATLAB workflows and cutting processing time by ~75% (2 hours to 30 minutes).",
+        "Fine-tuned a MobileNetV2 model in TensorFlow to classify 25 fabric types into 5 functional wash categories, improving validation accuracy from 66.4% to 71.5% via early-stopping optimization.",
+        "Developing regression and PCA-based feature reduction pipeline across 4+ sensor channels to support Remaining Useful Life (RUL) modeling for embedded laundry appliance diagnostics."
+      ]
+    },
+    {
+      "company": "Verzeo EduTech",
+      "title": "Machine Learning Intern",
+      "location": "Indore, India",
+      "start_date": "2021-05",
+      "end_date": "2021-07",
+      "bullet_points": [
+        "Implemented ML classification models (Naive Bayes, SVM, Logistic Regression) with 71% accuracy—15% above the untrained baseline on a real-world text classification dataset.",
+        "Streamlined preprocessing pipeline, reducing sparse features by 30% to improve model training efficiency.",
+        "Created a content-based movie recommendation system processing 5,000+ titles and delivering top-5 personalized results in under 1 second per query.",
+        "Developed interactive dashboards to analyze user behavior and feature correlations, reducing reporting effort by 50%."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Autonomous Cloud Governance",
+      "technologies": [
+        "Python",
+        "AWS",
+        "React",
+        "Multi-Agent Systems"
+      ],
+      "date": "2026-03",
+      "bullet_points": [
+        "Designed a cloud-native multi-agent governance platform integrating 4+ autonomous AI agents for cost-aware orchestration, intelligent routing, and policy-driven decision-making across distributed workflows.",
+        "Built a fiscal governance system with circuit breakers and cognitive-tiered routing, cutting cost overrun from 412% to 0% while maintaining full task completion (80% reduction on routine workflows).",
+        "Maintained 100% enforcement accuracy across 50+ autonomous iterations with zero race conditions, at sub-millisecond governance latency (0.04ms, <0.01% overhead vs. LLM inference).",
+        "Architected a modular cloud-native framework utilizing Python, React, and Amazon Web Services to scale governance automation for over 100 concurrent agents with zero performance bottlenecks."
+      ]
+    },
+    {
+      "name": "RNA-Seq Biomarker Discovery",
+      "technologies": [
+        "Python",
+        "Scikit-learn",
+        "Pandas",
+        "NumPy",
+        "gProfiler"
+      ],
+      "date": "2025-12",
+      "bullet_points": [
+        "Developed an interpretable ML pipeline in Python (scikit-learn) for multi-class cancer subtype classification across 5 TCGA RNA-Seq datasets, applying cross-validation, regularization, and pathway enrichment analysis.",
+        "Attained 100.0% mean 5-fold cross-validated accuracy (std dev 0.0%) with regularized Logistic Regression, outperforming SVC (99.88%) and Random Forest (99.63%) baselines.",
+        "Reduced 1,000+ gene features to a 50-gene biomarker panel via coefficient-based feature selection, validated through g:Profiler pathway enrichment analysis."
+      ]
+    },
+    {
+      "name": "Real-Time Stock Analysis Dashboard",
+      "technologies": [
+        "React (Vite)",
+        "Recharts",
+        "Firebase",
+        "FastAPI"
+      ],
+      "date": "2025-07",
+      "bullet_points": [
+        "Deployed a full-stack stock analytics platform using React (Vite), FastAPI, and Firebase with real-time market data pipelines and 5+ technical indicators for multi-horizon trend analysis.",
+        "Backtested Random Forest across 5 U.S. stocks (AAPL, MSFT, TSLA, GOOGL, AMZN) using 80/20 train-test split, delivering 5.13% average MAPE across all tickers.",
+        "Evaluated 4 forecasting models (Random Forest, XGBoost, LightGBM, Linear Regression) on live AAPL data; Linear Regression achieved lowest error (MAPE 4.24%, MAE 12.15)."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Master of Science in Computer Science",
+      "institution": "Rochester Institute of Technology",
+      "location": "Rochester, NY",
+      "gpa": "3.82",
+      "start_date": "2024-08",
+      "graduation_year": "2027"
+    },
+    {
+      "degree": "Bachelor of Technology in Computer Science",
+      "institution": "Institute of Engineering and Science, IPS Academy",
+      "location": "Indore, India",
+      "start_date": "2020-12",
+      "graduation_year": "2024"
+    }
+  ]
+}

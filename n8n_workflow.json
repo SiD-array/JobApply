@@ -1,0 +1,267 @@
+{
+  "name": "Job Application & Resume Tailoring Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-ingest",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "node-1-webhook-discovery",
+      "name": "Stage 1: Job Discovery Webhook"
+    },
+    {
+      "parameters": {
+        "command": "python evaluator.py --profile source_profile.json"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        480,
+        300
+      ],
+      "id": "node-2-evaluation-gate",
+      "name": "Stage 2: Evaluation Gate (Python)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ JSON.parse($json.stdout).passed }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ],
+      "id": "node-3-if-pass-gate",
+      "name": "Stage 2: Score >= 70%?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert ATS (Applicant Tracking System) optimizer and professional resume writer. You will receive candidate profile data (source_profile.json) and a job_description.\\n\\nSTRICT CONSTRAINTS:\\n- NEVER invent, fabricate, or exaggerate work experience, metrics, companies, titles, or dates.\\n- You may ONLY reorder, highlight, or rephrase bullet points from source_profile.json to emphasize relevance to the target job.\\n- Align technical terminology with keywords from the job description where factually accurate.\\n- Output MUST strictly adhere to the requested JSON structure. Output raw JSON ONLY.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Source Profile:\\n{{ JSON.stringify(require('./source_profile.json')) }}\\n\\nTarget Job Description:\\n{{ $('Stage 1: Job Discovery Webhook').item.json.description }}\"\n    }\n  ],\n  \"temperature\": 0.2,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"stream\": false\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        940,
+        280
+      ],
+      "id": "node-4-llm-resume-tailor",
+      "name": "Stage 3: LLM Resume Tailoring (Groq Llama 3.3 70B)"
+    },
+    {
+      "parameters": {
+        "command": "=python generate_pdf.py --job-id \"{{ $('Stage 1: Job Discovery Webhook').item.json.job_id }}\" --output \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id }}_Resume.pdf\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        280
+      ],
+      "id": "node-5-pdf-compiler",
+      "name": "Stage 4: PDF Compiler"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"username\": \"JobApply AI Assistant\",\n  \"embeds\": [\n    {\n      \"title\": \"🎯 New Matching Job Application Found!\",\n      \"color\": 3066993,\n      \"fields\": [\n        {\n          \"name\": \"🏢 Company\",\n          \"value\": \"{{ $('Stage 1: Job Discovery Webhook').item.json.company }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"💼 Title\",\n          \"value\": \"{{ $('Stage 1: Job Discovery Webhook').item.json.title }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"📊 Match Score\",\n          \"value\": \"**{{ JSON.parse($('Stage 2: Evaluation Gate (Python)').item.json.stdout).score }}%**\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"🔗 Apply URL\",\n          \"value\": \"{{ $('Stage 1: Job Discovery Webhook').item.json.apply_url }}\",\n          \"inline\": false\n        },\n        {\n          \"name\": \"📄 Tailored Resume PDF\",\n          \"value\": \"`output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id }}_Resume.pdf`\",\n          \"inline\": false\n        }\n      ]\n    }\n  ]\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1400,
+        280
+      ],
+      "id": "node-6-hitl-notification",
+      "name": "Stage 5: Discord HITL Notification"
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1620,
+        280
+      ],
+      "id": "node-7-wait-approval",
+      "name": "Stage 5: Wait for Human Approval Webhook"
+    },
+    {
+      "parameters": {
+        "command": "=python apply_playwright.py --url \"{{ $('Stage 1: Job Discovery Webhook').item.json.apply_url }}\" --pdf \"output_resumes/{{ $('Stage 1: Job Discovery Webhook').item.json.job_id }}_Resume.pdf\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        280
+      ],
+      "id": "node-8-playwright-autofill",
+      "name": "Stage 5: Playwright Auto-Fill & Review"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "rejected_by_evaluator"
+            },
+            {
+              "name": "reason",
+              "value": "Job score below 70% threshold"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        940,
+        480
+      ],
+      "id": "node-9-rejected-log",
+      "name": "Log Rejected Job"
+    }
+  ],
+  "connections": {
+    "Stage 1: Job Discovery Webhook": {
+      "main": [
+        [
+          {
+            "node": "Stage 2: Evaluation Gate (Python)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 2: Evaluation Gate (Python)": {
+      "main": [
+        [
+          {
+            "node": "Stage 2: Score >= 70%?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 2: Score >= 70%?": {
+      "main": [
+        [
+          {
+            "node": "Stage 3: LLM Resume Tailoring",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rejected Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 3: LLM Resume Tailoring": {
+      "main": [
+        [
+          {
+            "node": "Stage 4: PDF Compiler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 4: PDF Compiler": {
+      "main": [
+        [
+          {
+            "node": "Stage 5: Telegram HITL Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 5: Telegram HITL Notification": {
+      "main": [
+        [
+          {
+            "node": "Stage 5: Wait for Human Approval Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 5: Wait for Human Approval Webhook": {
+      "main": [
+        [
+          {
+            "node": "Stage 5: Playwright Auto-Fill & Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "id": "job-apply-pipeline-v1"
+}

@@ -1,0 +1,21 @@
+# Environment & Secret variables
+.env
+.env.local
+
+# Python Virtual Environment & Cache
+venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE & Editor Configs
+.vscode/
+.idea/
+
+# Temp & Output Files
+output_resumes/
+temp_job.json
+output_resumes/*.pdf
+output_resumes/*.json
