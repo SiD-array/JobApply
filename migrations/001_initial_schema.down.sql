@@ -1,0 +1,17 @@
+-- Migration 001 Down: Rollback Initial Database Schema for JobApply
+
+BEGIN;
+
+DROP TABLE IF EXISTS applications CASCADE;
+DROP TABLE IF EXISTS evaluations CASCADE;
+DROP TABLE IF EXISTS cover_letters CASCADE;
+DROP TABLE IF EXISTS resumes CASCADE;
+DROP TABLE IF EXISTS job_skills CASCADE;
+DROP TABLE IF EXISTS skills CASCADE;
+DROP TABLE IF EXISTS jobs CASCADE;
+DROP TABLE IF EXISTS companies CASCADE;
+
+DROP TYPE IF EXISTS interview_probability CASCADE;
+DROP TYPE IF EXISTS application_status CASCADE;
+
+COMMIT;
