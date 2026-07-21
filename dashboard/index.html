@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobApply AI - Autonomous Application Dashboard</title>
+  
+  <!-- Google Fonts & Tailwind CSS CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & Babel CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="custom-scrollbar">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Sample Data Store
+    const INITIAL_JOBS = [
+      { id: "j1", title: "AI Software Engineer", company: "NextGen AI Labs", location: "San Francisco, CA / Remote", source: "Greenhouse", score: 94, status: "Applied", date: "2026-07-21", url: "https://greenhouse.io" },
+      { id: "j2", title: "Machine Learning Engineer", company: "Notion", location: "Remote", source: "Ashby", score: 91, status: "Interview", date: "2026-07-20", url: "https://ashbyhq.com" },
+      { id: "j3", title: "Backend Engineer (Python/AWS)", company: "Stripe", location: "New York, NY", source: "Greenhouse", score: 88, status: "OA", date: "2026-07-19", url: "https://stripe.com" },
+      { id: "j4", title: "Cloud AI Platform Engineer", company: "NVIDIA", location: "Santa Clara, CA", source: "Workday", score: 96, status: "Offer", date: "2026-07-18", url: "https://nvidia.com" },
+      { id: "j5", title: "Applied AI Engineer", company: "Airbnb", location: "Remote", source: "Greenhouse", score: 89, status: "Applied", date: "2026-07-17", url: "https://airbnb.com" },
+      { id: "j6", title: "Computer Vision Researcher", company: "Bosch Group", location: "Berlin, Germany", source: "LinkedIn", score: 93, status: "Interview", date: "2026-07-16", url: "https://bosch.com" },
+      { id: "j7", title: "Software Engineer - Infrastructure", company: "Palantir", location: "Denver, CO", source: "Lever", score: 82, status: "Rejected", date: "2026-07-15", url: "https://lever.co" },
+      { id: "j8", title: "Stealth AI Developer", company: "Stealth Startup", location: "San Francisco, CA", source: "WellFound", score: 85, status: "Discovered", date: "2026-07-14", url: "https://wellfound.com" }
+    ];
+
+    const RESUME_VERSIONS = [
+      { id: "v1", date: "2026-07-21", job: "AI Software Engineer @ NextGen AI Labs", score: 94, changes: ["Prioritized PyTorch, TensorFlow, FastAPI", "Reordered Cloud Governance project to top", "Emphasized Bosch AI internship metrics"], path: "output_resumes/Tailored_Resume_Test.pdf" },
+      { id: "v2", date: "2026-07-20", job: "Machine Learning Engineer @ Notion", score: 91, changes: ["Highlighted RAG & vector search experience", "Emphasized RNA-Seq biomarker discovery project"], path: "output_resumes/Notion_Resume.pdf" },
+      { id: "v3", date: "2026-07-18", job: "Cloud AI Platform Engineer @ NVIDIA", score: 96, changes: ["Emphasized AWS multi-agent cloud governance", "Prioritized Python, C++, CUDA"], path: "output_resumes/NVIDIA_Resume.pdf" }
+    ];
+
+    function App() {
+      const [activeTab, setActiveTab] = useState("dashboard");
+      const [jobs, setJobs] = useState(INITIAL_JOBS);
+      const [searchQuery, setSearchQuery] = useState("");
+      const [sourceFilter, setSourceFilter] = useState("All");
+
+      return (
+        <div class="flex h-screen overflow-hidden">
+          {/* SIDEBAR NAVIGATION */}
+          <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between p-4">
+            <div>
+              {/* Brand Header */}
+              <div class="flex items-center gap-3 px-2 py-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/20">
+                  🚀
+                </div>
+                <div>
+                  <h1 class="font-bold text-lg leading-tight">JobApply AI</h1>
+                  <span class="text-xs text-indigo-400 font-medium">Autonomous Platform</span>
+                </div>
+              </div>
+
+              {/* Navigation Menu */}
+              <nav class="space-y-1">
+                {[
+                  { id: "dashboard", label: "Dashboard", icon: "layout-dashboard" },
+                  { id: "jobs", label: "Discovered Jobs", icon: "briefcase" },
+                  { id: "applications", label: "Applications", icon: "kanban" },
+                  { id: "analytics", label: "Analytics & Insights", icon: "bar-chart-3" },
+                  { id: "resumes", label: "Resume Versions", icon: "file-text" },
+                  { id: "settings", label: "Settings", icon: "settings" }
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    class={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                      activeTab === item.id 
+                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20' 
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <span class="text-base">{item.icon === 'layout-dashboard' ? '📊' : item.icon === 'briefcase' ? '💼' : item.icon === 'kanban' ? '📑' : item.icon === 'bar-chart-3' ? '📈' : item.icon === 'file-text' ? '📄' : '⚙️'}</span>
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* Candidate Profile Widget */}
+            <div class="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-sm">
+                SB
+              </div>
+              <div class="overflow-hidden">
+                <div class="text-sm font-semibold truncate">Siddharth Bhople</div>
+                <div class="text-xs text-slate-400 truncate">MS CS Candidate @ RIT</div>
+              </div>
+            </div>
+          </aside>
+
+          {/* MAIN CONTENT AREA */}
+          <main class="flex-1 overflow-y-auto bg-slate-950 p-8 custom-scrollbar">
+            {activeTab === 'dashboard' && <DashboardTab jobs={jobs} setActiveTab={setActiveTab} />}
+            {activeTab === 'jobs' && <JobsTab jobs={jobs} searchQuery={searchQuery} setSearchQuery={setSearchQuery} sourceFilter={sourceFilter} setSourceFilter={setSourceFilter} />}
+            {activeTab === 'applications' && <ApplicationsTab jobs={jobs} setJobs={setJobs} />}
+            {activeTab === 'analytics' && <AnalyticsTab jobs={jobs} />}
+            {activeTab === 'resumes' && <ResumesTab versions={RESUME_VERSIONS} />}
+            {activeTab === 'settings' && <SettingsTab />}
+          </main>
+        </div>
+      );
+    }
+
+    /* ---------------- DASHBOARD TAB ---------------- */
+    function DashboardTab({ jobs, setActiveTab }) {
+      const appliedCount = jobs.filter(j => j.status === 'Applied').length;
+      const interviewCount = jobs.filter(j => j.status === 'Interview').length;
+      const offerCount = jobs.filter(j => j.status === 'Offer').length;
+      const avgScore = Math.round(jobs.reduce((acc, j) => acc + j.score, 0) / jobs.length);
+
+      return (
+        <div class="space-y-8">
+          <div>
+            <h2 class="text-2xl font-bold">Dashboard Overview</h2>
+            <p class="text-slate-400 text-sm">Real-time pipeline metrics and job match activity</p>
+          </div>
+
+          {/* KPI Cards Grid */}
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[
+              { label: "Total Applications", val: jobs.length, sub: "Across 6 Job Boards", icon: "📑", color: "from-indigo-500/20 to-indigo-600/5 text-indigo-400" },
+              { label: "Interviews", val: interviewCount, sub: `${Math.round((interviewCount/jobs.length)*100)}% Conversion Rate`, icon: "🔥", color: "from-amber-500/20 to-amber-600/5 text-amber-400" },
+              { label: "Offers Received", val: offerCount, sub: "Top Candidate Match", icon: "🏆", color: "from-emerald-500/20 to-emerald-600/5 text-emerald-400" },
+              { label: "Avg Fit Match", val: `${avgScore}%`, sub: "AI Recruiter Evaluated", icon: "🎯", color: "from-cyan-500/20 to-cyan-600/5 text-cyan-400" }
+            ].map((kpi, idx) => (
+              <div key={idx} class={`glass-card p-6 rounded-2xl bg-gradient-to-b ${kpi.color}`}>
+                <div class="flex justify-between items-start mb-4">
+                  <span class="text-slate-400 font-medium text-sm">{kpi.label}</span>
+                  <span class="text-2xl">{kpi.icon}</span>
+                </div>
+                <div class="text-3xl font-extrabold text-white mb-1">{kpi.val}</div>
+                <div class="text-xs text-slate-400">{kpi.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Recent Applications & Quick Actions */}
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 glass-card rounded-2xl p-6">
+              <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-lg">Active Job Applications</h3>
+                <button onClick={() => setActiveTab('applications')} class="text-xs font-semibold text-indigo-400 hover:underline">View All ➔</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                  <thead class="text-xs text-slate-400 uppercase border-b border-slate-800">
+                    <tr>
+                      <th class="pb-3">Role & Company</th>
+                      <th class="pb-3">Source</th>
+                      <th class="pb-3">Match Score</th>
+                      <th class="pb-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800/50">
+                    {jobs.slice(0, 5).map(j => (
+                      <tr key={j.id} class="hover:bg-slate-800/30 transition">
+                        <td class="py-3">
+                          <div class="font-semibold text-white">{j.title}</div>
+                          <div class="text-xs text-slate-400">{j.company} &bull; {j.location}</div>
+                        </td>
+                        <td class="py-3 text-slate-400 text-xs"><span class="px-2 py-1 bg-slate-800 rounded-md">{j.source}</span></td>
+                        <td class="py-3 font-bold text-indigo-400">{j.score}%</td>
+                        <td class="py-3">
+                          <StatusBadge status={j.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Quick Action Widget */}
+            <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+              <div>
+                <h3 class="font-bold text-lg mb-2">⚡ Discovery Engine Trigger</h3>
+                <p class="text-xs text-slate-400 mb-6">Run multi-provider search across LinkedIn, Greenhouse, Lever, Ashby, and Workday</p>
+                <div class="space-y-3">
+                  <button onClick={() => alert('Triggering multi-provider job discovery engine...')} class="w-full py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 rounded-xl font-semibold text-sm shadow-lg shadow-indigo-500/25 hover:opacity-90 transition">
+                    Run Auto-Discovery (5 Jobs)
+                  </button>
+                  <button onClick={() => setActiveTab('jobs')} class="w-full py-3 bg-slate-800 border border-slate-700 rounded-xl font-semibold text-sm hover:bg-slate-700 transition">
+                    Browse Discovered Jobs
+                  </button>
+                </div>
+              </div>
+              <div class="mt-6 pt-6 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                <span>Groq Llama 3.3 70B Active</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------------- JOBS TAB ---------------- */
+    function JobsTab({ jobs, searchQuery, setSearchQuery, sourceFilter, setSourceFilter }) {
+      const filteredJobs = jobs.filter(j => {
+        const matchesSearch = j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSource = sourceFilter === "All" || j.source === sourceFilter;
+        return matchesSearch && matchesSource;
+      });
+
+      return (
+        <div class="space-y-6">
+          <div class="flex justify-between items-center">
+            <div>
+              <h2 class="text-2xl font-bold">Discovered Job Postings</h2>
+              <p class="text-slate-400 text-sm">Normalized listings from 6 supported job boards</p>
+            </div>
+          </div>
+
+          {/* Search & Provider Filter Bar */}
+          <div class="flex flex-col md:flex-row gap-4">
+            <input 
+              type="text"
+              placeholder="Search title, company, or skills..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500"
+            />
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              class="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-indigo-500"
+            >
+              <option value="All">All Providers</option>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Greenhouse">Greenhouse</option>
+              <option value="Lever">Lever</option>
+              <option value="Ashby">Ashby</option>
+              <option value="Workday">Workday</option>
+              <option value="WellFound">WellFound</option>
+            </select>
+          </div>
+
+          {/* Jobs List Cards */}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredJobs.map(j => (
+              <div key={j.id} class="glass-card rounded-2xl p-6 flex flex-col justify-between hover:border-indigo-500/50 transition">
+                <div>
+                  <div class="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 class="font-bold text-lg text-white">{j.title}</h3>
+                      <div class="text-sm text-slate-400 font-medium">{j.company} &bull; {j.location}</div>
+                    </div>
+                    <span class="px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold rounded-lg text-sm">
+                      {j.score}% Match
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2 mt-3">
+                    <span class="px-2.5 py-1 bg-slate-800 text-slate-400 text-xs rounded-md">{j.source}</span>
+                    <span class="text-xs text-slate-500">Posted {j.date}</span>
+                  </div>
+                </div>
+                <div class="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center">
+                  <StatusBadge status={j.status} />
+                  <a href={j.url} target="_blank" class="px-4 py-2 bg-indigo-600 text-white font-semibold text-xs rounded-xl hover:bg-indigo-500 transition">
+                    View & Apply ➔
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------------- APPLICATIONS TAB ---------------- */
+    function ApplicationsTab({ jobs, setJobs }) {
+      const columns = ["Discovered", "Applied", "OA", "Interview", "Offer", "Rejected"];
+
+      return (
+        <div class="space-y-6">
+          <div>
+            <h2 class="text-2xl font-bold">Application Lifecycle Kanban</h2>
+            <p class="text-slate-400 text-sm">Track active applications across stages</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-6 gap-4 overflow-x-auto pb-4">
+            {columns.map(col => {
+              const colJobs = jobs.filter(j => j.status === col);
+              return (
+                <div key={col} class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col min-w-[200px]">
+                  <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-sm text-slate-300">{col}</h3>
+                    <span class="px-2 py-0.5 bg-slate-800 text-xs font-semibold rounded-md">{colJobs.length}</span>
+                  </div>
+                  <div class="space-y-3 flex-1">
+                    {colJobs.map(j => (
+                      <div key={j.id} class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-xl shadow-sm hover:border-indigo-500/50 transition">
+                        <div class="font-semibold text-sm text-white">{j.title}</div>
+                        <div class="text-xs text-slate-400 mb-2">{j.company}</div>
+                        <div class="flex justify-between items-center text-xs">
+                          <span class="text-indigo-400 font-bold">{j.score}%</span>
+                          <span class="text-slate-500">{j.source}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------------- ANALYTICS TAB (6 CHARTS) ---------------- */
+    function AnalyticsTab({ jobs }) {
+      const chartRef1 = useRef(null);
+      const chartRef2 = useRef(null);
+      const chartRef3 = useRef(null);
+      const chartRef4 = useRef(null);
+      const chartRef5 = useRef(null);
+      const chartRef6 = useRef(null);
+
+      useEffect(() => {
+        // Chart 1: Applications per Week
+        if (chartRef1.current) {
+          new Chart(chartRef1.current, {
+            type: 'bar',
+            data: {
+              labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+              datasets: [{ label: 'Applications Sent', data: [12, 18, 24, 31], backgroundColor: '#6366f1' }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+          });
+        }
+
+        // Chart 2: Interview Rate
+        if (chartRef2.current) {
+          new Chart(chartRef2.current, {
+            type: 'doughnut',
+            data: {
+              labels: ['Interviews', 'Pending', 'Rejected'],
+              datasets: [{ data: [25, 60, 15], backgroundColor: ['#10b981', '#6366f1', '#f43f5e'] }]
+            },
+            options: { responsive: true }
+          });
+        }
+
+        // Chart 3: Offer Rate
+        if (chartRef3.current) {
+          new Chart(chartRef3.current, {
+            type: 'doughnut',
+            data: {
+              labels: ['Offers', 'Interviews', 'Applied'],
+              datasets: [{ data: [12, 25, 63], backgroundColor: ['#3b82f6', '#10b981', '#475569'] }]
+            },
+            options: { responsive: true }
+          });
+        }
+
+        // Chart 4: Top Matching Companies
+        if (chartRef4.current) {
+          new Chart(chartRef4.current, {
+            type: 'bar',
+            data: {
+              labels: ['NVIDIA', 'NextGen AI', 'Bosch', 'Notion', 'Airbnb'],
+              datasets: [{ label: 'Fit Match Score', data: [96, 94, 93, 91, 89], backgroundColor: '#06b6d4' }]
+            },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+          });
+        }
+
+        // Chart 5: Missing Skills Analysis
+        if (chartRef5.current) {
+          new Chart(chartRef5.current, {
+            type: 'bar',
+            data: {
+              labels: ['Kubernetes', 'GraphQL', 'Terraform', 'Kafka', 'CUDA'],
+              datasets: [{ label: 'Missing Frequency', data: [6, 4, 3, 3, 2], backgroundColor: '#f59e0b' }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+          });
+        }
+
+        // Chart 6: Job Sources Breakdown
+        if (chartRef6.current) {
+          new Chart(chartRef6.current, {
+            type: 'pie',
+            data: {
+              labels: ['Greenhouse', 'Ashby', 'LinkedIn', 'Workday', 'Lever', 'WellFound'],
+              datasets: [{ data: [35, 20, 18, 12, 10, 5], backgroundColor: ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'] }]
+            },
+            options: { responsive: true }
+          });
+        }
+      }, []);
+
+      return (
+        <div class="space-y-8">
+          <div>
+            <h2 class="text-2xl font-bold">Analytics & Market Insights</h2>
+            <p class="text-slate-400 text-sm">Performance metrics across application funnels and skill gaps</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass-card rounded-2xl p-6">
+              <h3 class="font-bold text-sm text-slate-300 mb-4">Applications per Week</h3>
+              <canvas ref={chartRef1}></canvas>
+            </div>
+            <div class="glass-card rounded-2xl p-6">
+              <h3 class="font-bold text-sm text-slate-300 mb-4">Interview Conversion Rate</h3>
+              <canvas ref={chartRef2}></canvas>
+            </div>
+            <div class="glass-card rounded-2xl p-6">
+              <h3 class="font-bold text-sm text-slate-300 mb-4">Offer Conversion Rate</h3>
+              <canvas ref={chartRef3}></canvas>
+            </div>
+            <div class="glass-card rounded-2xl p-6">
+              <h3 class="font-bold text-sm text-slate-300 mb-4">Top Matching Companies</h3>
+              <canvas ref={chartRef4}></canvas>
+            </div>
+            <div class="glass-card rounded-2xl p-6">
+              <h3 class="font-bold text-sm text-slate-300 mb-4">Missing Skills Gap Analysis</h3>
+              <canvas ref={chartRef5}></canvas>
+            </div>
+            <div class="glass-card rounded-2xl p-6">
+              <h3 class="font-bold text-sm text-slate-300 mb-4">Job Sources Breakdown</h3>
+              <canvas ref={chartRef6}></canvas>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------------- RESUMES TAB ---------------- */
+    function ResumesTab({ versions }) {
+      return (
+        <div class="space-y-6">
+          <div>
+            <h2 class="text-2xl font-bold">Historical Resume Versions</h2>
+            <p class="text-slate-400 text-sm">Tailored 1-page ATS resumes and modification logs</p>
+          </div>
+
+          <div class="space-y-4">
+            {versions.map(v => (
+              <div key={v.id} class="glass-card rounded-2xl p-6 flex flex-col md:flex-row justify-between gap-6">
+                <div>
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="font-bold text-lg text-white">{v.job}</span>
+                    <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 font-bold rounded-lg text-xs">ATS Score: {v.score}%</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mb-4">Generated on {v.date}</div>
+                  <div class="space-y-1">
+                    <div class="text-xs font-semibold text-slate-300">Summary of Targeted Changes:</div>
+                    {v.changes.map((c, i) => (
+                      <div key={i} class="text-xs text-slate-400 flex items-center gap-2">
+                        <span class="text-indigo-400">&bull;</span> {c}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div class="flex flex-col justify-center">
+                  <a href={v.path} target="_blank" class="px-5 py-2.5 bg-indigo-600 text-white font-semibold text-xs rounded-xl text-center hover:bg-indigo-500 transition">
+                    Preview PDF Resume 📄
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ---------------- SETTINGS TAB ---------------- */
+    function SettingsTab() {
+      return (
+        <div class="space-y-6 max-w-3xl">
+          <div>
+            <h2 class="text-2xl font-bold">Platform Settings & Credentials</h2>
+            <p class="text-slate-400 text-sm">Configure API keys, webhooks, and scoring thresholds</p>
+          </div>
+
+          <div class="glass-card rounded-2xl p-6 space-y-6">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-2">Groq API Key (Free Llama 3.3 70B)</label>
+              <input type="password" placeholder="gsk_your_groq_api_key_here" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-2">Discord Webhook URL (HITL Notifications)</label>
+              <input type="text" value="https://discord.com/api/webhooks/1528752944584069361/..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-2">Evaluation Gate Threshold Score (%)</label>
+              <input type="number" value="70" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300" />
+            </div>
+
+            <div class="pt-4 border-t border-slate-800 flex justify-end">
+              <button onClick={() => alert('Settings saved successfully!')} class="px-6 py-2.5 bg-indigo-600 text-white font-semibold text-sm rounded-xl hover:bg-indigo-500 transition">
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* Helper Status Badge */
+    function StatusBadge({ status }) {
+      const colors = {
+        Discovered: "bg-slate-800 text-slate-300 border-slate-700",
+        Applied: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+        OA: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+        Interview: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+        Offer: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+        Rejected: "bg-rose-500/10 text-rose-400 border-rose-500/20"
+      };
+      return (
+        <span class={`px-2.5 py-1 border rounded-lg text-xs font-bold ${colors[status] || colors.Discovered}`}>
+          {status}
+        </span>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
