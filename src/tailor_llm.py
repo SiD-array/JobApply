@@ -160,7 +160,7 @@ Description:
         url = "https://api.cerebras.ai/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
-            "model": "llama-3.3-70b",
+            "model": "llama3.1-8b",
             "messages": [
                 {"role": "system", "content": TAILOR_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
@@ -177,7 +177,7 @@ Description:
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
-            "model": "meta-llama/llama-3.1-8b-instruct:free",
+            "model": "meta-llama/llama-3-8b-instruct:free",
             "messages": [
                 {"role": "system", "content": TAILOR_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
