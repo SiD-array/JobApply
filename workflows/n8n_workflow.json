@@ -53,23 +53,19 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "url": "http://localhost:11434/v1/chat/completions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert ATS optimizer and resume writer. Reorder and rephrase bullet points from the candidate profile to fit the job description with zero hallucination. Output raw valid JSON matching source_profile layout.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Job Title: {{ $json.title }}\\nCompany: {{ $json.company }}\\nDescription: {{ $('Stage 1: Job Discovery Webhook').item.json.description || $('Stage 1: Job Discovery Webhook').item.json.body.description }}\"\n    }\n  ],\n  \"temperature\": 0.2,\n  \"response_format\": { \"type\": \"json_object\" }\n}"
+        "jsonBody": "={\n  \"model\": \"qwen2.5:7b\",\n  \"temperature\": 0.2,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a precise resume tailoring engine. Output ONLY valid JSON matching the user's schema. DO NOT invent, fabricate, or exaggerate work experience, metrics, or dates. Reorder and rephrase existing bullet points from the source profile to align with job description keywords.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Job Description: {{ $json.body.description || $json.description }}\\n\\nSource Profile: {{ JSON.stringify($node['Stage 2: Evaluation Gate (Native Code)'].json.profile || $node['Stage 2: Evaluation Gate (Native Code)'].json) }}\"\n    }\n  ]\n}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
@@ -78,7 +74,7 @@
         280
       ],
       "id": "node-4-llm-resume-tailor",
-      "name": "Stage 3: LLM Resume Tailoring (Groq Llama 3.3 70B)"
+      "name": "Stage 3: LLM Resume Tailoring (Ollama Qwen2.5)"
     },
     {
       "parameters": {
@@ -173,7 +169,7 @@
       "main": [
         [
           {
-            "node": "Stage 3: LLM Resume Tailoring (Groq Llama 3.3 70B)",
+            "node": "Stage 3: LLM Resume Tailoring (Ollama Qwen2.5)",
             "type": "main",
             "index": 0
           }
@@ -187,7 +183,7 @@
         ]
       ]
     },
-    "Stage 3: LLM Resume Tailoring (Groq Llama 3.3 70B)": {
+    "Stage 3: LLM Resume Tailoring (Ollama Qwen2.5)": {
       "main": [
         [
           {

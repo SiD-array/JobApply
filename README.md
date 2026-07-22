@@ -83,9 +83,22 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_url
 # Pipeline Settings
 OUTPUT_RESUME_DIR=output_resumes
 EVALUATION_THRESHOLD=70.0
+
+# Local Ollama Settings (Optional, Stage 3 local model)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:7b
 ```
 
-### 3. Customize Your Master Candidate Profile
+### 3. Setup Local Ollama Model (Required for Local Offline Mode)
+To run Stage 3 (LLM Resume Tailoring) locally:
+1. Download and install [Ollama](https://ollama.com).
+2. Download the required model in your terminal:
+   ```bash
+   ollama pull qwen2.5:7b
+   ```
+3. Ensure Ollama is running (`http://localhost:11434` is accessible).
+
+### 4. Customize Your Master Candidate Profile
 Update `source_profile.json` with your real work history, education, projects, and core technical skills.
 
 ---
@@ -132,7 +145,7 @@ python run_pipeline.py --url "https://company.greenhouse.io/job/101" --job sampl
 1. Open your **n8n** dashboard.
 2. Click **Workflows** ➔ **Import from File**.
 3. Select `workflows/n8n_workflow.json`.
-4. Configure `GROQ_API_KEY` and `DISCORD_WEBHOOK_URL` in environment settings.
+4. Configure `DISCORD_WEBHOOK_URL` and `OLLAMA_BASE_URL` in environment settings (if using Docker, set `OLLAMA_BASE_URL` to `http://host.docker.internal:11434`).
 5. Activate the workflow to ingest and process job postings automatically!
 
 ---

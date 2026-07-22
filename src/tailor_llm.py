@@ -101,6 +101,10 @@ Description:
                 if not api_key:
                     raise ValueError("GEMINI_API_KEY not found in environment")
                 result = self._call_gemini(user_prompt, api_key)
+            elif self.provider == "ollama":
+                base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                model = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+                result = self._call_ollama(user_prompt, base_url, model)
             else:
                 api_key = os.getenv("OPENROUTER_API_KEY")
                 result = self._call_openrouter(user_prompt, api_key)
@@ -180,12 +184,28 @@ Description:
             return json.loads(text_content)
         raise RuntimeError(f"Gemini API Error {res.status_code}: {res.text}")
 
+    def _call_ollama(self, prompt: str, base_url: str, model: str) -> dict:
+        url = f"{base_url.rstrip('/')}/v1/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": TAILOR_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=60)
+        if res.status_code == 200:
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"Ollama API Error {res.status_code}: {res.text}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Stage 3 LLM Resume Tailor CLI")
     parser.add_argument("--profile", default="source_profile.json", help="Path to source_profile.json")
     parser.add_argument("--job", default="samples/ai_engineer_job.json", help="Path to job JSON file")
-    parser.add_argument("--provider", default="groq", choices=["groq", "cerebras", "openrouter", "gemini"], help="AI Provider")
+    parser.add_argument("--provider", default="groq", choices=["groq", "cerebras", "openrouter", "gemini", "ollama"], help="AI Provider")
     parser.add_argument("--output", default="output_resumes/tailored_profile.json", help="Output tailored profile JSON path")
     args = parser.parse_args()
 
