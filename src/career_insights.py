@@ -14,6 +14,7 @@ import os
 import json
 import argparse
 import requests
+import time
 from collections import Counter
 from typing import List, Dict, Any
 from dotenv import load_dotenv
@@ -179,6 +180,9 @@ CANDIDATE PROFILE SUMMARY:
 
         last_error = None
         for p in order:
+            if self._is_on_cooldown(p):
+                print(f"[AI] Skipping provider {p.upper()} (on 2-hour rate-limit/error cooldown)", file=sys.stderr)
+                continue
             try:
                 if p == "ollama":
                     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -199,9 +203,42 @@ CANDIDATE PROFILE SUMMARY:
                     return self._call_openrouter(prompt, api_key)
             except Exception as e:
                 print(f"[AI WARNING] Career insights provider {p.upper()} failed: {e}", file=sys.stderr)
+                self._set_cooldown(p)
                 last_error = e
 
         raise RuntimeError(f"All Career Insights AI providers failed. Last error: {last_error}")
+
+    def _is_on_cooldown(self, provider: str) -> bool:
+        if provider == "ollama":
+            return False
+        cooldown_file = ".api_cooldowns.json"
+        cooldown_duration = 7200  # 2 hours
+        try:
+            if os.path.exists(cooldown_file):
+                with open(cooldown_file, "r") as f:
+                    data = json.load(f)
+                fail_time = data.get(provider, 0)
+                if time.time() - fail_time < cooldown_duration:
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def _set_cooldown(self, provider: str):
+        if provider == "ollama":
+            return
+        cooldown_file = ".api_cooldowns.json"
+        try:
+            data = {}
+            if os.path.exists(cooldown_file):
+                with open(cooldown_file, "r") as f:
+                    data = json.load(f)
+            data[provider] = time.time()
+            with open(cooldown_file, "w") as f:
+                json.dump(data, f)
+            print(f"[AI COOLDOWN] Set 2-hour fallback cooldown for provider: {provider.upper()}", file=sys.stderr)
+        except Exception:
+            pass
 
     def _call_ollama(self, prompt: str, base_url: str, model: str) -> dict:
         url = f"{base_url.rstrip('/')}/v1/chat/completions"
@@ -212,7 +249,8 @@ CANDIDATE PROFILE SUMMARY:
                 {"role": "system", "content": INSIGHTS_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
             ],
-            "temperature": 0.2
+            "temperature": 0.2,
+            "stream": False
         }
         res = requests.post(url, headers=headers, json=payload, timeout=60)
         if res.status_code == 200:
