@@ -107,8 +107,10 @@ class DiscoveryEngine:
             try:
                 payload = job.to_dict() if hasattr(job, "to_dict") else job
                 # Inject keys to bypass n8n environment variable sandbox restrictions
-                payload["groq_api_key"] = os.getenv("GROQ_API_KEY")
-                payload["discord_webhook_url"] = os.getenv("DISCORD_WEBHOOK_URL")
+                groq_key = os.getenv("GROQ_API_KEY")
+                discord_url = os.getenv("DISCORD_WEBHOOK_URL")
+                payload["groq_api_key"] = groq_key.strip() if groq_key else ""
+                payload["discord_webhook_url"] = discord_url.strip() if discord_url else ""
                 
                 res = requests.post(webhook_url, json=payload, timeout=5)
                 if res.status_code in (200, 201):
