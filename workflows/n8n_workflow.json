@@ -75,7 +75,7 @@
       ],
       "id": "node-4-llm-resume-tailor",
       "name": "Stage 3: LLM Resume Tailoring (Ollama Qwen2.5)",
-      "onError": "continueErrorOutput"
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
