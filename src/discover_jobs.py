@@ -64,6 +64,10 @@ def main():
                 j_dict = j.to_dict()
                 res = evaluator.evaluate_job(profile_data, j_dict, threshold=70.0)
                 if res.get("passed"):
+                    j.score = res.get("score")
+                    j.passed = res.get("passed")
+                    j.matched_skills = res.get("matchedSkills") or res.get("matched_skills") or []
+                    j.missing_skills = res.get("missingSkills") or res.get("missing_skills") or []
                     passed_jobs.append(j)
                     print(f"  + Match PASSED ({res.get('score')}%): {j.title} @ {j.company}")
                 if len(passed_jobs) >= args.target_passed:

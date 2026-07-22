@@ -21,6 +21,10 @@ class Job:
     postedDate: str           # YYYY-MM-DD format
     salary: str               # e.g., "$120,000 - $150,000 / year" or "Not specified"
     source: str               # Provider name: LinkedIn, WellFound, Greenhouse, Lever, Ashby, Workday
+    score: Optional[float] = None
+    passed: Optional[bool] = None
+    matched_skills: List[str] = field(default_factory=list)
+    missing_skills: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert Job instance to standard JSON dictionary."""
