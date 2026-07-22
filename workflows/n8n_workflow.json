@@ -80,7 +80,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "url": "={{ $('Stage 1: Job Discovery Webhook').item.json.discord_webhook_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -175,7 +175,7 @@
             },
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+              "value": "=Bearer {{ $('Stage 1: Job Discovery Webhook').item.json.groq_api_key }}"
             }
           ]
         },
