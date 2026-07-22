@@ -47,7 +47,7 @@ Return RAW VALID JSON ONLY matching this exact schema:
 class CareerInsightsEngine:
     """AI Career Insights & Skill Gap Analyzer Engine."""
 
-    def __init__(self, provider: str = "groq"):
+    def __init__(self, provider: str = "ollama"):
         self.provider = provider.lower()
 
     def analyze_jobs(self, jobs: List[dict], profile: dict = None) -> dict:
@@ -157,11 +157,7 @@ class CareerInsightsEngine:
         return analysis_summary
 
     def _generate_llm_recommendations(self, analysis: dict, profile: dict = None) -> dict:
-        """Call Groq LLM for career recommendations."""
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable missing")
-
+        """Generate career recommendations using fallback LLM execution."""
         prompt = f"""
 STATISTICAL JOB MARKET ANALYSIS:
 {json.dumps(analysis, indent=2)}
@@ -169,7 +165,61 @@ STATISTICAL JOB MARKET ANALYSIS:
 CANDIDATE PROFILE SUMMARY:
 {json.dumps(profile or {}, indent=2)}
 """
+        return self._execute_with_fallback(prompt)
 
+    def _execute_with_fallback(self, prompt: str) -> dict:
+        """Attempt local Ollama first, then fall back to cloud providers."""
+        order = []
+        if self.provider:
+            order.append(self.provider)
+
+        for p in ["ollama", "groq", "cerebras", "openrouter"]:
+            if p not in order:
+                order.append(p)
+
+        last_error = None
+        for p in order:
+            try:
+                if p == "ollama":
+                    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                    model = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+                    return self._call_ollama(prompt, base_url, model)
+                elif p == "groq":
+                    api_key = os.getenv("GROQ_API_KEY")
+                    if not api_key:
+                        raise ValueError("GROQ_API_KEY not set")
+                    return self._call_groq(prompt, api_key)
+                elif p == "cerebras":
+                    api_key = os.getenv("CEREBRAS_API_KEY")
+                    if not api_key:
+                        raise ValueError("CEREBRAS_API_KEY not set")
+                    return self._call_cerebras(prompt, api_key)
+                elif p == "openrouter":
+                    api_key = os.getenv("OPENROUTER_API_KEY")
+                    return self._call_openrouter(prompt, api_key)
+            except Exception as e:
+                print(f"[AI WARNING] Career insights provider {p.upper()} failed: {e}", file=sys.stderr)
+                last_error = e
+
+        raise RuntimeError(f"All Career Insights AI providers failed. Last error: {last_error}")
+
+    def _call_ollama(self, prompt: str, base_url: str, model: str) -> dict:
+        url = f"{base_url.rstrip('/')}/v1/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": INSIGHTS_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=60)
+        if res.status_code == 200:
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"Ollama API Error {res.status_code}: {res.text}")
+
+    def _call_groq(self, prompt: str, api_key: str) -> dict:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
@@ -181,11 +231,44 @@ CANDIDATE PROFILE SUMMARY:
             "temperature": 0.2,
             "response_format": {"type": "json_object"}
         }
-
         res = requests.post(url, headers=headers, json=payload, timeout=25)
         if res.status_code == 200:
             return json.loads(res.json()["choices"][0]["message"]["content"])
         raise RuntimeError(f"Groq API Error {res.status_code}: {res.text}")
+
+    def _call_cerebras(self, prompt: str, api_key: str) -> dict:
+        url = "https://api.cerebras.ai/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
+        payload = {
+            "model": "llama-3.3-70b",
+            "messages": [
+                {"role": "system", "content": INSIGHTS_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"}
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=25)
+        if res.status_code == 200:
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"Cerebras API Error {res.status_code}: {res.text}")
+
+    def _call_openrouter(self, prompt: str, api_key: str) -> dict:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
+        payload = {
+            "model": "meta-llama/llama-3.1-8b-instruct:free",
+            "messages": [
+                {"role": "system", "content": INSIGHTS_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"}
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=30)
+        if res.status_code == 200:
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"OpenRouter API Error {res.status_code}: {res.text}")
 
 
 def main():
@@ -193,6 +276,7 @@ def main():
     parser.add_argument("--jobs", default="samples/discovered_jobs.json", help="Path to discovered or evaluated jobs JSON file")
     parser.add_argument("--profile", default="source_profile.json", help="Path to source_profile.json")
     parser.add_argument("--output", default="output_resumes/career_insights.json", help="Output insights JSON file path")
+    parser.add_argument("--provider", default="ollama", choices=["ollama", "groq", "cerebras", "openrouter"], help="AI Provider")
     args = parser.parse_args()
 
     profile_data = {}
@@ -205,7 +289,7 @@ def main():
         with open(args.jobs, "r", encoding="utf-8") as f:
             jobs_data = json.load(f)
 
-    engine = CareerInsightsEngine()
+    engine = CareerInsightsEngine(provider=args.provider)
     insights = engine.analyze_jobs(jobs_data, profile_data)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)

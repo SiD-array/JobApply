@@ -139,7 +139,7 @@ COVER_LETTER_HTML_TEMPLATE = """<!DOCTYPE html>
 class CoverLetterGenerator:
     """Cover Letter Generator Engine."""
 
-    def __init__(self, provider: str = "groq"):
+    def __init__(self, provider: str = "ollama"):
         self.provider = provider.lower()
 
     def generate_cover_letter(self, profile: dict, job: dict) -> dict:
@@ -159,31 +159,132 @@ Job Description:
 {job_desc}
 """
 
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable missing")
+        try:
+            res = self._execute_with_fallback(user_prompt)
+            res["company"] = company
+            res["job_title"] = job_title
+            return res
+        except Exception as e:
+            print(f"[COVER LETTER WARNING] LLM Cover Letter generation failed ({e}). Falling back to heuristic generator.", file=sys.stderr)
+            return self._fallback_generator(company, job_title)
 
+    def _execute_with_fallback(self, prompt: str) -> dict:
+        """Attempt local Ollama first, then fall back to cloud providers."""
+        order = []
+        if self.provider:
+            order.append(self.provider)
+
+        for p in ["ollama", "groq", "cerebras", "openrouter"]:
+            if p not in order:
+                order.append(p)
+
+        last_error = None
+        for p in order:
+            try:
+                if p == "ollama":
+                    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                    model = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+                    return self._call_ollama(prompt, base_url, model)
+                elif p == "groq":
+                    api_key = os.getenv("GROQ_API_KEY")
+                    if not api_key:
+                        raise ValueError("GROQ_API_KEY not set")
+                    return self._call_groq(prompt, api_key)
+                elif p == "cerebras":
+                    api_key = os.getenv("CEREBRAS_API_KEY")
+                    if not api_key:
+                        raise ValueError("CEREBRAS_API_KEY not set")
+                    return self._call_cerebras(prompt, api_key)
+                elif p == "openrouter":
+                    api_key = os.getenv("OPENROUTER_API_KEY")
+                    return self._call_openrouter(prompt, api_key)
+            except Exception as e:
+                print(f"[AI WARNING] Cover letter provider {p.upper()} failed: {e}", file=sys.stderr)
+                last_error = e
+
+        raise RuntimeError(f"All Cover Letter AI providers failed. Last error: {last_error}")
+
+    def _call_ollama(self, prompt: str, base_url: str, model: str) -> dict:
+        url = f"{base_url.rstrip('/')}/v1/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": COVER_LETTER_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=60)
+        if res.status_code == 200:
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"Ollama API Error {res.status_code}: {res.text}")
+
+    def _call_groq(self, prompt: str, api_key: str) -> dict:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
             "model": "llama-3.3-70b-versatile",
             "messages": [
                 {"role": "system", "content": COVER_LETTER_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": prompt}
             ],
             "temperature": 0.2,
             "response_format": {"type": "json_object"}
         }
-
         res = requests.post(url, headers=headers, json=payload, timeout=30)
         if res.status_code == 200:
-            content = res.json()["choices"][0]["message"]["content"]
-            result = json.loads(content)
-            result["company"] = company
-            result["job_title"] = job_title
-            return result
-        else:
-            raise RuntimeError(f"Groq API Error {res.status_code}: {res.text}")
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"Groq API Error {res.status_code}: {res.text}")
+
+    def _call_cerebras(self, prompt: str, api_key: str) -> dict:
+        url = "https://api.cerebras.ai/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
+        payload = {
+            "model": "llama-3.3-70b",
+            "messages": [
+                {"role": "system", "content": COVER_LETTER_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"}
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=30)
+        if res.status_code == 200:
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"Cerebras API Error {res.status_code}: {res.text}")
+
+    def _call_openrouter(self, prompt: str, api_key: str) -> dict:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
+        payload = {
+            "model": "meta-llama/llama-3.1-8b-instruct:free",
+            "messages": [
+                {"role": "system", "content": COVER_LETTER_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"}
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=30)
+        if res.status_code == 200:
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"OpenRouter API Error {res.status_code}: {res.text}")
+
+    def _fallback_generator(self, company: str, job_title: str) -> dict:
+        """Deterministic fallback cover letter if offline."""
+        opening = f"I am writing to express my strong interest in the {job_title} position at {company}."
+        why = f"I have followed {company}'s growth and engineering work, and I am drawn to your scale, engineering culture, and development approach."
+        exp = "My background includes hands-on experience in machine learning pipelines, backend software engineering, and database design. In my previous AI Engineering Internship, I focused on high-efficiency deep learning pipelines and API deployment."
+        closing = "Thank you for your time and consideration. I look forward to discussing how my experience can contribute to your team."
+        markdown = f"# Cover Letter\n\n{opening}\n\n{why}\n\n{exp}\n\n{closing}"
+        return {
+            "opening": opening,
+            "why_company": why,
+            "relevant_experience": exp,
+            "closing": closing,
+            "markdown": markdown
+        }
 
     def render_pdf(self, cover_data: dict, candidate_profile: dict, output_pdf_path: str):
         """Render single-page vector PDF cover letter using Playwright Chromium."""
@@ -230,7 +331,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Tailored 1-Page Cover Letter in Markdown and PDF")
     parser.add_argument("--profile", default="source_profile.json", help="Path to source profile or tailored profile JSON")
     parser.add_argument("--job", default="samples/ai_engineer_job.json", help="Path to target job JSON file")
-    parser.add_argument("--provider", default="groq", help="AI provider")
+    parser.add_argument("--provider", default="ollama", help="AI provider")
     parser.add_argument("--output-md", default="output_resumes/Cover_Letter.md", help="Output markdown path")
     parser.add_argument("--output-pdf", default="output_resumes/Cover_Letter.pdf", help="Output PDF path")
     args = parser.parse_args()

@@ -65,7 +65,7 @@ Return RAW VALID JSON ONLY matching this exact structure:
 class ResumeTailor:
     """Multi-provider LLM Resume Tailoring Engine."""
 
-    def __init__(self, provider: str = "groq"):
+    def __init__(self, provider: str = "ollama"):
         self.provider = provider.lower()
 
     def tailor_resume(self, profile: dict, job: dict) -> dict:
@@ -86,29 +86,7 @@ Description:
 """
 
         try:
-            if self.provider == "groq":
-                api_key = os.getenv("GROQ_API_KEY")
-                if not api_key:
-                    raise ValueError("GROQ_API_KEY not found in environment")
-                result = self._call_groq(user_prompt, api_key)
-            elif self.provider == "cerebras":
-                api_key = os.getenv("CEREBRAS_API_KEY")
-                if not api_key:
-                    raise ValueError("CEREBRAS_API_KEY not found in environment")
-                result = self._call_cerebras(user_prompt, api_key)
-            elif self.provider == "gemini":
-                api_key = os.getenv("GEMINI_API_KEY")
-                if not api_key:
-                    raise ValueError("GEMINI_API_KEY not found in environment")
-                result = self._call_gemini(user_prompt, api_key)
-            elif self.provider == "ollama":
-                base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-                model = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
-                result = self._call_ollama(user_prompt, base_url, model)
-            else:
-                api_key = os.getenv("OPENROUTER_API_KEY")
-                result = self._call_openrouter(user_prompt, api_key)
-
+            result = self._execute_with_fallback(user_prompt)
             return result
 
         except Exception as e:
@@ -119,6 +97,47 @@ Description:
                 "atsKeywordCoverage": [{"keyword": "Python", "status": "Matched"}],
                 "estimatedAtsScore": 85
             }
+
+    def _execute_with_fallback(self, prompt: str) -> dict:
+        """Attempt local Ollama first, then fall back to cloud providers."""
+        order = []
+        if self.provider:
+            order.append(self.provider)
+
+        for p in ["ollama", "groq", "cerebras", "gemini", "openrouter"]:
+            if p not in order:
+                order.append(p)
+
+        last_error = None
+        for p in order:
+            try:
+                if p == "ollama":
+                    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                    model = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+                    return self._call_ollama(prompt, base_url, model)
+                elif p == "groq":
+                    api_key = os.getenv("GROQ_API_KEY")
+                    if not api_key:
+                        raise ValueError("GROQ_API_KEY not found in environment")
+                    return self._call_groq(prompt, api_key)
+                elif p == "cerebras":
+                    api_key = os.getenv("CEREBRAS_API_KEY")
+                    if not api_key:
+                        raise ValueError("CEREBRAS_API_KEY not found in environment")
+                    return self._call_cerebras(prompt, api_key)
+                elif p == "gemini":
+                    api_key = os.getenv("GEMINI_API_KEY")
+                    if not api_key:
+                        raise ValueError("GEMINI_API_KEY not found in environment")
+                    return self._call_gemini(prompt, api_key)
+                elif p == "openrouter":
+                    api_key = os.getenv("OPENROUTER_API_KEY")
+                    return self._call_openrouter(prompt, api_key)
+            except Exception as e:
+                print(f"[AI WARNING] Resume tailor provider {p.upper()} failed: {e}", file=sys.stderr)
+                last_error = e
+
+        raise RuntimeError(f"All resume tailor AI providers failed. Last error: {last_error}")
 
     def _call_groq(self, prompt: str, api_key: str) -> dict:
         url = "https://api.groq.com/openai/v1/chat/completions"
@@ -205,7 +224,7 @@ def main():
     parser = argparse.ArgumentParser(description="Stage 3 LLM Resume Tailor CLI")
     parser.add_argument("--profile", default="source_profile.json", help="Path to source_profile.json")
     parser.add_argument("--job", default="samples/ai_engineer_job.json", help="Path to job JSON file")
-    parser.add_argument("--provider", default="groq", choices=["groq", "cerebras", "openrouter", "gemini", "ollama"], help="AI Provider")
+    parser.add_argument("--provider", default="ollama", choices=["groq", "cerebras", "openrouter", "gemini", "ollama"], help="AI Provider")
     parser.add_argument("--output", default="output_resumes/tailored_profile.json", help="Output tailored profile JSON path")
     args = parser.parse_args()
 

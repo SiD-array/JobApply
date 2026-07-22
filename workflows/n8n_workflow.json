@@ -74,7 +74,8 @@
         280
       ],
       "id": "node-4-llm-resume-tailor",
-      "name": "Stage 3: LLM Resume Tailoring (Ollama Qwen2.5)"
+      "name": "Stage 3: LLM Resume Tailoring (Ollama Qwen2.5)",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -91,12 +92,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"username\": \"JobApply AI Assistant\",\n  \"embeds\": [\n    {\n      \"title\": \"🎯 New Matching Job Application Found!\",\n      \"color\": 3066993,\n      \"fields\": [\n        {\n          \"name\": \"🏢 Company\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.company }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"💼 Title\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.title }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"📊 Match Score\",\n          \"value\": \"**{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.score }}%**\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"🔗 Apply URL\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.apply_url }}\",\n          \"inline\": false\n        }\n      ]\n    }\n  ]\n}"
+        "jsonBody": "={\n  \"username\": \"JobApply AI Assistant\",\n  \"embeds\": [\n    {\n      \"title\": \"\ud83c\udfaf New Matching Job Application Found!\",\n      \"color\": 3066993,\n      \"fields\": [\n        {\n          \"name\": \"\ud83c\udfe2 Company\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.company }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"\ud83d\udcbc Title\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.title }}\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"\ud83d\udcca Match Score\",\n          \"value\": \"**{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.score }}%**\",\n          \"inline\": true\n        },\n        {\n          \"name\": \"\ud83d\udd17 Apply URL\",\n          \"value\": \"{{ $('Stage 2: Evaluation Gate (Native Code)').item.json.apply_url }}\",\n          \"inline\": false\n        }\n      ]\n    }\n  ]\n}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
-        1180,
+        1380,
         280
       ],
       "id": "node-6-hitl-notification",
@@ -110,7 +111,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
       "position": [
-        1400,
+        1600,
         280
       ],
       "id": "node-7-wait-approval",
@@ -140,6 +141,56 @@
       ],
       "id": "node-9-rejected-log",
       "name": "Log Rejected Job"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ !$json.error }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1160,
+        280
+      ],
+      "id": "node-5-ollama-success-check",
+      "name": "Stage 3: Ollama Succeeded?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a precise resume tailoring engine. Output ONLY valid JSON matching the user's schema. DO NOT invent, fabricate, or exaggerate work experience, metrics, or dates. Reorder and rephrase existing bullet points from the source profile to align with job description keywords.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Job Description: {{ $('Stage 1: Job Discovery Webhook').item.json.body.description || $('Stage 1: Job Discovery Webhook').item.json.description }}\\n\\nSource Profile: {{ JSON.stringify($node['Stage 2: Evaluation Gate (Native Code)'].json.profile || $node['Stage 2: Evaluation Gate (Native Code)'].json) }}\"\n    }\n  ],\n  \"temperature\": 0.2,\n  \"response_format\": { \"type\": \"json_object\" }\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1160,
+        480
+      ],
+      "id": "node-10-groq-fallback",
+      "name": "Stage 3: LLM Resume Tailoring Fallback (Groq)"
     }
   ],
   "connections": {
@@ -184,6 +235,35 @@
       ]
     },
     "Stage 3: LLM Resume Tailoring (Ollama Qwen2.5)": {
+      "main": [
+        [
+          {
+            "node": "Stage 3: Ollama Succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 3: Ollama Succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Stage 5: Discord HITL Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stage 3: LLM Resume Tailoring Fallback (Groq)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 3: LLM Resume Tailoring Fallback (Groq)": {
       "main": [
         [
           {

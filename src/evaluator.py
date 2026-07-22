@@ -59,7 +59,7 @@ Return RAW VALID JSON ONLY matching this exact schema:
 class AIEvaluator:
     """AI-Powered Technical Recruiter Evaluator engine."""
 
-    def __init__(self, provider: str = "groq"):
+    def __init__(self, provider: str = "ollama"):
         self.provider = provider.lower()
 
     def evaluate_job(self, profile: dict, job: dict, threshold: float = 70.0) -> dict:
@@ -81,22 +81,9 @@ Description:
 {description}
 """
 
-        # Try LLM Provider
+        # Try LLM Provider with fallbacks
         try:
-            if self.provider == "groq":
-                api_key = os.getenv("GROQ_API_KEY")
-                if not api_key:
-                    raise ValueError("GROQ_API_KEY not set")
-                res = self._call_groq(prompt_input, api_key)
-            elif self.provider == "cerebras":
-                api_key = os.getenv("CEREBRAS_API_KEY")
-                if not api_key:
-                    raise ValueError("CEREBRAS_API_KEY not set")
-                res = self._call_cerebras(prompt_input, api_key)
-            else:
-                api_key = os.getenv("OPENROUTER_API_KEY")
-                res = self._call_openrouter(prompt_input, api_key)
-
+            res = self._execute_with_fallback(prompt_input)
             res["job_id"] = job.get("job_id", "job_101")
             res["title"] = job_title
             res["company"] = company
@@ -107,6 +94,42 @@ Description:
         except Exception as e:
             print(f"[AI EVALUATOR WARNING] LLM Evaluation failed ({e}). Falling back to heuristic recruiter evaluator.", file=sys.stderr)
             return self._fallback_evaluator(profile, job, threshold)
+
+    def _execute_with_fallback(self, prompt: str) -> dict:
+        """Attempt local Ollama first, then fall back to cloud providers."""
+        order = []
+        if self.provider:
+            order.append(self.provider)
+
+        for p in ["ollama", "groq", "cerebras", "openrouter"]:
+            if p not in order:
+                order.append(p)
+
+        last_error = None
+        for p in order:
+            try:
+                if p == "ollama":
+                    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                    model = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+                    return self._call_ollama(prompt, base_url, model)
+                elif p == "groq":
+                    api_key = os.getenv("GROQ_API_KEY")
+                    if not api_key:
+                        raise ValueError("GROQ_API_KEY not set")
+                    return self._call_groq(prompt, api_key)
+                elif p == "cerebras":
+                    api_key = os.getenv("CEREBRAS_API_KEY")
+                    if not api_key:
+                        raise ValueError("CEREBRAS_API_KEY not set")
+                    return self._call_cerebras(prompt, api_key)
+                elif p == "openrouter":
+                    api_key = os.getenv("OPENROUTER_API_KEY")
+                    return self._call_openrouter(prompt, api_key)
+            except Exception as e:
+                print(f"[AI WARNING] Recruiter evaluator provider {p.upper()} failed: {e}", file=sys.stderr)
+                last_error = e
+
+        raise RuntimeError(f"All Recruiter AI providers failed. Last error: {last_error}")
 
     def _call_groq(self, prompt: str, api_key: str) -> dict:
         url = "https://api.groq.com/openai/v1/chat/completions"
@@ -159,6 +182,22 @@ Description:
             return json.loads(res.json()["choices"][0]["message"]["content"])
         raise RuntimeError(f"OpenRouter API Error {res.status_code}: {res.text}")
 
+    def _call_ollama(self, prompt: str, base_url: str, model: str) -> dict:
+        url = f"{base_url.rstrip('/')}/v1/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": RECRUITER_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.1
+        }
+        res = requests.post(url, headers=headers, json=payload, timeout=45)
+        if res.status_code == 200:
+            return json.loads(res.json()["choices"][0]["message"]["content"])
+        raise RuntimeError(f"Ollama API Error {res.status_code}: {res.text}")
+
     def _fallback_evaluator(self, profile: dict, job: dict, threshold: float) -> dict:
         """Deterministic fallback evaluator if offline."""
         title = job.get("title", "").lower()
@@ -194,7 +233,7 @@ def main():
     parser = argparse.ArgumentParser(description="Stage 2 AI Recruiter Job Evaluator CLI")
     parser.add_argument("--profile", default="source_profile.json", help="Path to source_profile.json")
     parser.add_argument("--job", default="samples/ai_engineer_job.json", help="Path to job JSON file or text")
-    parser.add_argument("--provider", default="groq", choices=["groq", "cerebras", "openrouter"], help="AI Provider")
+    parser.add_argument("--provider", default="ollama", choices=["ollama", "groq", "cerebras", "openrouter"], help="AI Provider")
     parser.add_argument("--threshold", type=float, default=70.0, help="Passing threshold score")
     args = parser.parse_args()
 

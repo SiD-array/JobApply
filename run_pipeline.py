@@ -32,7 +32,7 @@ def main():
     parser.add_argument("--job", help="Path to job JSON or Markdown description file")
     parser.add_argument("--title", default="Software / AI Engineer", help="Job Title if providing text")
     parser.add_argument("--company", default="Target Company", help="Company Name if providing text")
-    parser.add_argument("--provider", default="groq", choices=["groq", "cerebras", "openrouter"], help="AI Provider")
+    parser.add_argument("--provider", default="ollama", choices=["groq", "cerebras", "openrouter", "gemini", "ollama"], help="AI Provider")
     parser.add_argument("--force-apply", action="store_true", help="Proceed even if evaluation fit score is < 70%")
     args = parser.parse_args()
 
@@ -59,7 +59,7 @@ def main():
     # 1. Stage 2: Fit Evaluation Gate
     print("\n--- STAGE 2: EVALUATION GATE ---")
     eval_script = os.path.join("src", "evaluator.py")
-    eval_out = run_command([eval_script, "--profile", "source_profile.json", "--job", job_file_path])
+    eval_out = run_command([eval_script, "--profile", "source_profile.json", "--job", job_file_path, "--provider", args.provider])
     eval_json = json.loads(eval_out)
     score = eval_json.get("score", 0.0)
     passed = eval_json.get("passed", False)
