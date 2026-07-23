@@ -84,7 +84,7 @@ def main():
                 # Double search limits and try again
                 limit *= 2
                 attempts += 1
-                print(f"⚠️ Did not reach target of {args.target_passed} passed jobs. Increasing batch size to {limit} per provider...")
+                print(f"[WARNING] Did not reach target of {args.target_passed} passed jobs. Increasing batch size to {limit} per provider...")
         else:
             jobs = discovered
             break
