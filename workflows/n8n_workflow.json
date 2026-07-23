@@ -80,7 +80,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Stage 1: Job Discovery Webhook').item.json.discord_webhook_url }}",
+        "url": "={{ $('Stage 1: Job Discovery Webhook').item.json.body.discord_webhook_url || $('Stage 1: Job Discovery Webhook').item.json.discord_webhook_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -175,7 +175,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer {{ $('Stage 1: Job Discovery Webhook').item.json.groq_api_key }}"
+              "value": "Bearer {{ $('Stage 1: Job Discovery Webhook').item.json.body.groq_api_key || $('Stage 1: Job Discovery Webhook').item.json.groq_api_key }}"
             }
           ]
         },
