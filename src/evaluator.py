@@ -229,7 +229,8 @@ Description:
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.1,
-            "stream": False
+            "stream": False,
+            "response_format": {"type": "json_object"}
         }
         res = requests.post(url, headers=headers, json=payload, timeout=45)
         if res.status_code == 200:
