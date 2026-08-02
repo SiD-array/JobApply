@@ -19,3 +19,4 @@ output_resumes/
 temp_job.json
 output_resumes/*.pdf
 output_resumes/*.json
+.api_cooldowns.json
