@@ -33,7 +33,7 @@ def main():
     parser.add_argument("--title", default="Software / AI Engineer", help="Job Title if providing text")
     parser.add_argument("--company", default="Target Company", help="Company Name if providing text")
     parser.add_argument("--provider", default="ollama", choices=["groq", "cerebras", "openrouter", "gemini", "ollama"], help="AI Provider")
-    parser.add_argument("--force-apply", action="store_true", help="Proceed even if evaluation fit score is < 70%")
+    parser.add_argument("--force-apply", action="store_true", help="Proceed even if evaluation fit score is < 70%%")
     args = parser.parse_args()
 
     # Build job object
