@@ -19,7 +19,12 @@ from pathlib import Path
 
 def run_command(cmd_args: list) -> str:
     """Execute python subcommand using current virtual environment python."""
-    python_exe = sys.executable
+    # Look for virtualenv Python executable first to ensure dependencies are loaded
+    venv_python = os.path.join("venv", "Scripts", "python.exe") if os.name == "nt" else os.path.join("venv", "bin", "python")
+    if os.path.exists(venv_python):
+        python_exe = venv_python
+    else:
+        python_exe = sys.executable
     full_cmd = [python_exe] + cmd_args
     print(f"\n[RUNNING] {' '.join(full_cmd)}")
     result = subprocess.run(full_cmd, capture_output=True, text=True, check=True)
