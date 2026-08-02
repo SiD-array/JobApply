@@ -2,17 +2,6 @@
 """
 Stage 3: Multi-Provider LLM Resume Tailor
 Tailors candidate profile for a target job description with ZERO hallucination guarantees.
-Modifies ONLY:
-  1. Professional Summary
-  2. Skills Ordering
-  3. Project Ordering
-  4. Bullet Wording
-
-Returns structured JSON:
-  - tailoredProfile
-  - summaryOfChanges
-  - atsKeywordCoverage
-  - estimatedAtsScore
 """
 
 import sys
@@ -21,46 +10,67 @@ import json
 import argparse
 import requests
 import time
+import copy
 from typing import Dict, Any
 from dotenv import load_dotenv
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from services.resume_validator import sanitize_and_validate_resume_json
+
 load_dotenv()
 
-TAILOR_SYSTEM_PROMPT = """You are an expert ATS (Applicant Tracking System) resume optimizer and professional resume writer.
-Your task is to tailor a candidate's master resume JSON (source_profile.json) for a target job posting.
+# Load system prompt template
+prompt_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "prompts", "tailor_resume_prompt.txt"))
+if os.path.exists(prompt_path):
+    with open(prompt_path, "r", encoding="utf-8") as f:
+        TAILOR_SYSTEM_PROMPT = f.read()
+else:
+    # Fallback system prompt if file is missing
+    TAILOR_SYSTEM_PROMPT = "You are a precise resume tailoring engine. Output ONLY valid JSON."
 
-STRICT CONSTRAINTS:
-1. NEVER fabricate, invent, or exaggerate work history, company names, job titles, metrics, or dates.
-2. NEVER rewrite the structural layout or schema of the resume. Keep formatting identical.
-3. YOU MAY ONLY MODIFY:
-   - Professional Summary: Align tone and key strengths with target job title and domain.
-   - Skills Ordering: Re-order existing candidate core_skills to prioritize skills mentioned in the job description.
-   - Project Ordering: Re-order projects to bring the most relevant project to the top.
-   - Bullet Wording: Rephrase existing experience and project bullets to highlight relevant tech keywords without changing facts.
-4. Highlight ONLY relevant skills that the candidate actually possesses.
-5. Preserve 100% ATS vector readability.
 
-OUTPUT SCHEMATIC REQUIREMENT:
-Return RAW VALID JSON ONLY matching this exact structure:
-{
-  "tailoredProfile": {
-    "name": "string",
-    "personal_info": { ... },
-    "education": [ ... ],
-    "professional_summary": "string",
-    "core_skills": ["string"],
-    "work_experience": [ ... ],
-    "projects": [ ... ]
-  },
-  "summaryOfChanges": [
-    "string description of change 1"
-  ],
-  "atsKeywordCoverage": [
-    {"keyword": "string", "status": "Matched" | "Missing"}
-  ],
-  "estimatedAtsScore": integer (0-100)
-}
-"""
+def merge_tailored_resume(source_profile: dict, tailored_data: dict) -> dict:
+    """
+    Merges tailored LLM data with the source profile schema.
+    """
+    profile = copy.deepcopy(source_profile)
+    
+    # 1. Update summary
+    profile["summary"] = tailored_data.get("tailored_summary", profile.get("summary", ""))
+    
+    # 2. Highlight/reorder core skills based on matched_keywords
+    matched = tailored_data.get("matched_keywords", [])
+    matched_set = {k.strip().lower() for k in matched}
+    
+    # Keep core skills but reorder so matched ones are at the front
+    skills = profile.get("core_skills", [])
+    reordered_skills = [s for s in skills if s.strip().lower() in matched_set]
+    reordered_skills += [s for s in skills if s.strip().lower() not in matched_set]
+    profile["core_skills"] = reordered_skills
+    
+    # 3. Update work experience bullet points
+    tailored_exp_map = {
+        item["company"].strip().lower(): item["bullet_points"]
+        for item in tailored_data.get("tailored_experience", [])
+        if "company" in item and "bullet_points" in item
+    }
+    for exp in profile.get("experience", []):
+        company_key = exp.get("company", "").strip().lower()
+        if company_key in tailored_exp_map:
+            exp["bullet_points"] = tailored_exp_map[company_key]
+            
+    # 4. Update featured projects bullet points
+    tailored_proj_map = {
+        item["name"].strip().lower(): item["bullet_points"]
+        for item in tailored_data.get("featured_projects", [])
+        if "name" in item and "bullet_points" in item
+    }
+    for proj in profile.get("projects", []):
+        proj_key = proj.get("name", "").strip().lower()
+        if proj_key in tailored_proj_map:
+            proj["bullet_points"] = tailored_proj_map[proj_key]
+            
+    return profile
 
 
 class ResumeTailor:
@@ -87,20 +97,49 @@ Description:
 """
 
         try:
-            result = self._execute_with_fallback(user_prompt)
-            return result
+            validated_data = self._execute_with_fallback(user_prompt, profile)
+            
+            # Merge LLM output into full candidate profile
+            tailored_profile = merge_tailored_resume(profile, validated_data)
+            
+            # Generate changes summary list
+            changes = []
+            if "tailored_summary" in validated_data:
+                changes.append("Optimized professional summary for the target job description.")
+            if validated_data.get("tailored_experience"):
+                companies = [item["company"] for item in validated_data["tailored_experience"]]
+                changes.append(f"Tailored work experience bullet points for: {', '.join(companies)}")
+            if validated_data.get("featured_projects"):
+                projects = [item["name"] for item in validated_data["featured_projects"]]
+                changes.append(f"Tailored project bullet points for: {', '.join(projects)}")
+                
+            # Create ATS keyword coverage
+            coverage = []
+            for kw in validated_data.get("matched_keywords", []):
+                coverage.append({"keyword": kw, "status": "Matched"})
+                
+            # Estimate ATS score based on matched keywords count
+            match_count = len(validated_data.get("matched_keywords", []))
+            estimated_score = min(80 + (match_count * 2), 98)
+            
+            return {
+                "tailoredProfile": tailored_profile,
+                "summaryOfChanges": changes,
+                "atsKeywordCoverage": coverage,
+                "estimatedAtsScore": estimated_score
+            }
 
         except Exception as e:
             print(f"[TAILOR WARNING] LLM Tailoring failed ({e}). Falling back to master profile.", file=sys.stderr)
             return {
                 "tailoredProfile": profile,
-                "summaryOfChanges": ["Used source profile without modification due to LLM fallback."],
+                "summaryOfChanges": [f"Used source profile without modification due to LLM fallback error: {e}"],
                 "atsKeywordCoverage": [{"keyword": "Python", "status": "Matched"}],
                 "estimatedAtsScore": 85
             }
 
-    def _execute_with_fallback(self, prompt: str) -> dict:
-        """Attempt local Ollama first, then fall back to cloud providers."""
+    def _execute_with_fallback(self, prompt: str, profile: dict) -> dict:
+        """Attempt local Ollama first, then fall back to cloud providers, validating each."""
         order = []
         if self.provider:
             order.append(self.provider)
@@ -115,28 +154,34 @@ Description:
                 print(f"[AI] Skipping provider {p.upper()} (on 2-hour rate-limit/error cooldown)", file=sys.stderr)
                 continue
             try:
+                raw_response = ""
                 if p == "ollama":
                     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
                     model = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
-                    return self._call_ollama(prompt, base_url, model)
+                    raw_response = self._call_ollama(prompt, base_url, model)
                 elif p == "groq":
                     api_key = os.getenv("GROQ_API_KEY")
                     if not api_key:
                         raise ValueError("GROQ_API_KEY not found in environment")
-                    return self._call_groq(prompt, api_key)
+                    raw_response = self._call_groq(prompt, api_key)
                 elif p == "cerebras":
                     api_key = os.getenv("CEREBRAS_API_KEY")
                     if not api_key:
                         raise ValueError("CEREBRAS_API_KEY not found in environment")
-                    return self._call_cerebras(prompt, api_key)
+                    raw_response = self._call_cerebras(prompt, api_key)
                 elif p == "gemini":
                     api_key = os.getenv("GEMINI_API_KEY")
                     if not api_key:
                         raise ValueError("GEMINI_API_KEY not found in environment")
-                    return self._call_gemini(prompt, api_key)
+                    raw_response = self._call_gemini(prompt, api_key)
                 elif p == "openrouter":
                     api_key = os.getenv("OPENROUTER_API_KEY")
-                    return self._call_openrouter(prompt, api_key)
+                    raw_response = self._call_openrouter(prompt, api_key)
+                
+                # Sanitize and validate LLM JSON output
+                validated_data = sanitize_and_validate_resume_json(raw_response, profile)
+                return validated_data
+
             except Exception as e:
                 print(f"[AI WARNING] Resume tailor provider {p.upper()} failed: {e}", file=sys.stderr)
                 self._set_cooldown(p)
@@ -176,7 +221,7 @@ Description:
         except Exception:
             pass
 
-    def _call_groq(self, prompt: str, api_key: str) -> dict:
+    def _call_groq(self, prompt: str, api_key: str) -> str:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
@@ -190,10 +235,10 @@ Description:
         }
         res = requests.post(url, headers=headers, json=payload, timeout=30)
         if res.status_code == 200:
-            return json.loads(res.json()["choices"][0]["message"]["content"])
+            return res.json()["choices"][0]["message"]["content"]
         raise RuntimeError(f"Groq API Error {res.status_code}: {res.text}")
 
-    def _call_cerebras(self, prompt: str, api_key: str) -> dict:
+    def _call_cerebras(self, prompt: str, api_key: str) -> str:
         url = "https://api.cerebras.ai/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
@@ -207,10 +252,10 @@ Description:
         }
         res = requests.post(url, headers=headers, json=payload, timeout=30)
         if res.status_code == 200:
-            return json.loads(res.json()["choices"][0]["message"]["content"])
+            return res.json()["choices"][0]["message"]["content"]
         raise RuntimeError(f"Cerebras API Error {res.status_code}: {res.text}")
 
-    def _call_openrouter(self, prompt: str, api_key: str) -> dict:
+    def _call_openrouter(self, prompt: str, api_key: str) -> str:
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
@@ -224,10 +269,10 @@ Description:
         }
         res = requests.post(url, headers=headers, json=payload, timeout=30)
         if res.status_code == 200:
-            return json.loads(res.json()["choices"][0]["message"]["content"])
+            return res.json()["choices"][0]["message"]["content"]
         raise RuntimeError(f"OpenRouter API Error {res.status_code}: {res.text}")
 
-    def _call_gemini(self, prompt: str, api_key: str) -> dict:
+    def _call_gemini(self, prompt: str, api_key: str) -> str:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key.strip()}"
         headers = {"Content-Type": "application/json"}
         payload = {
@@ -236,11 +281,10 @@ Description:
         }
         res = requests.post(url, headers=headers, json=payload, timeout=30)
         if res.status_code == 200:
-            text_content = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-            return json.loads(text_content)
+            return res.json()["candidates"][0]["content"]["parts"][0]["text"]
         raise RuntimeError(f"Gemini API Error {res.status_code}: {res.text}")
 
-    def _call_ollama(self, prompt: str, base_url: str, model: str) -> dict:
+    def _call_ollama(self, prompt: str, base_url: str, model: str) -> str:
         url = f"{base_url.rstrip('/')}/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
         payload = {
@@ -255,7 +299,7 @@ Description:
         }
         res = requests.post(url, headers=headers, json=payload, timeout=60)
         if res.status_code == 200:
-            return json.loads(res.json()["choices"][0]["message"]["content"])
+            return res.json()["choices"][0]["message"]["content"]
         raise RuntimeError(f"Ollama API Error {res.status_code}: {res.text}")
 
 
