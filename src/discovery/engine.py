@@ -121,7 +121,7 @@ class DiscoveryEngine:
                     passed.append(job)
 
             limit_str = f"{limit} hours" if limit else "no limit"
-            print(f"    [DEBUG] Trying limit: {limit_str} ➔ {len(passed)} jobs passed.")
+            print(f"    [DEBUG] Trying limit: {limit_str} -> {len(passed)} jobs passed.")
 
             if passed or not limit:
                 # Add to deduplication sets and return
