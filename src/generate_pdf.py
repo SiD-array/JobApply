@@ -123,10 +123,10 @@ MY_RESUME_HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="address">{{ personal_info.location }}</div>
     {% endif %}
     <div class="contact-links">
-      {% if personal_info.phone %}📞 {{ personal_info.phone }} &nbsp;{% endif %}
-      {% if personal_info.email %}✉ <a href="mailto:{{ personal_info.email }}">{{ personal_info.email }}</a> &nbsp;{% endif %}
-      {% if personal_info.linkedin %}🔗 <a href="{{ personal_info.linkedin }}">{{ personal_info.linkedin | replace('https://', '') }}</a> &nbsp;{% endif %}
-      {% if personal_info.github %}💻 <a href="{{ personal_info.github }}">{{ personal_info.github | replace('https://', '') }}</a>{% endif %}
+      {% if personal_info.phone %}{{ personal_info.phone }}{% endif %}
+      {% if personal_info.email %} | <a href="mailto:{{ personal_info.email }}">{{ personal_info.email }}</a>{% endif %}
+      {% if personal_info.linkedin %} | <a href="{{ personal_info.linkedin }}">{{ personal_info.linkedin | replace('https://', '') }}</a>{% endif %}
+      {% if personal_info.github %} | <a href="{{ personal_info.github }}">{{ personal_info.github | replace('https://', '') }}</a>{% endif %}
     </div>
   </div>
 

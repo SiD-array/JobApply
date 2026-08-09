@@ -15,7 +15,8 @@
     ],
     "priority": 1,
     "github_repo": "Autonomous-Cloud-Governance",
-    "last_updated": "2026-04-30T16:31:50Z"
+    "last_updated": "2026-04-30T16:31:50Z",
+    "date": "2026-03"
   },
   "rna-seq-cancer-biomarker-discovery": {
     "name": "RNA-Seq Biomarker Discovery",
@@ -32,7 +33,8 @@
     ],
     "priority": 1,
     "github_repo": "rna-seq-cancer-biomarker-discovery",
-    "last_updated": "2026-01-02T09:21:43Z"
+    "last_updated": "2026-01-02T09:21:43Z",
+    "date": "2025-12"
   },
   "StockView": {
     "name": "Real-Time Stock Analysis Dashboard",
@@ -53,7 +55,8 @@
     ],
     "priority": 1,
     "github_repo": "StockView",
-    "last_updated": "2026-06-21T08:34:11Z"
+    "last_updated": "2026-06-21T08:34:11Z",
+    "date": "2025-07"
   },
   "Reddit-Comments-May-2015-Data-Analysis": {
     "name": "Reddit Comments Big Data Analysis",
@@ -71,7 +74,8 @@
     ],
     "priority": 2,
     "github_repo": "Reddit-Comments-May-2015-Data-Analysis",
-    "last_updated": "2026-01-02T09:03:30Z"
+    "last_updated": "2026-01-02T09:03:30Z",
+    "date": "2026-01"
   },
   "movie-recommender": {
     "name": "CineMatch Recommendation System",
@@ -89,7 +93,8 @@
     ],
     "priority": 2,
     "github_repo": "movie-recommender",
-    "last_updated": "2026-02-15T00:08:39Z"
+    "last_updated": "2026-02-15T00:08:39Z",
+    "date": "2026-02"
   },
   "SignLens-RealTime-ASL-Recognition": {
     "name": "Real-Time ASL Action Recognition",
@@ -108,7 +113,8 @@
     ],
     "priority": 3,
     "github_repo": "SignLens-RealTime-ASL-Recognition",
-    "last_updated": "2026-03-10T17:15:52Z"
+    "last_updated": "2026-03-10T17:15:52Z",
+    "date": "2026-03"
   },
   "F-applications": {
     "name": "F Applications",
@@ -125,7 +131,8 @@
     ],
     "priority": 2,
     "github_repo": "F-applications",
-    "last_updated": "2026-01-13T07:54:36Z"
+    "last_updated": "2026-01-13T07:54:36Z",
+    "date": "2026-01"
   },
   "PGLife": {
     "name": "Pglife",
@@ -146,7 +153,8 @@
     ],
     "priority": 2,
     "github_repo": "PGLife",
-    "last_updated": "2025-09-23T01:58:33Z"
+    "last_updated": "2025-09-23T01:58:33Z",
+    "date": "2025-09"
   },
   "SensorLens": {
     "name": "Sensorlens",
@@ -167,6 +175,7 @@
     ],
     "priority": 2,
     "github_repo": "SensorLens",
-    "last_updated": "2026-08-07T11:28:34Z"
+    "last_updated": "2026-08-07T11:28:34Z",
+    "date": "2026-08"
   }
 }
