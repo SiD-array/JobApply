@@ -19,20 +19,26 @@ class WellFoundProvider(BaseJobProvider):
 
     def fetch_jobs(self, query: SearchQuery) -> List[Job]:
         jobs = []
-        kw = query.keywords[0] if query.keywords else "AI Engineer"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json"
         }
         # Simulated API fetch for WellFound startup postings
         try:
-            # Fallback to startup job feed aggregator
-            res = requests.get("https://remoteok.com/api?tag=startup", headers=headers, timeout=10)
+            # Query main feed to get all active listings
+            res = requests.get("https://remoteok.com/api", headers=headers, timeout=10)
             if res.status_code == 200:
                 data = res.json()
-                for item in data[1:query.limit_per_provider+1]:
+                for item in data[1:]:
+                    if len(jobs) >= query.limit_per_provider:
+                        break
                     if isinstance(item, dict) and "position" in item:
-                        title = item.get("position", kw)
+                        title = item.get("position", "")
+                        
+                        # Apply smart keyword filter
+                        if not self.matches_keyword(title, query.keywords):
+                            continue
+
                         company = item.get("company", "WellFound Startup")
                         
                         job = Job(
