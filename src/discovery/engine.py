@@ -206,9 +206,11 @@ class DiscoveryEngine:
                 payload["discord_webhook_url"] = discord_url.strip() if discord_url else ""
                 
                 res = requests.post(webhook_url, json=payload, timeout=5)
-                if res.status_code in (200, 201):
+                if res.status_code in (200, 201, 202, 204):
                     success_count += 1
-            except Exception:
-                pass
+                else:
+                    print(f"    [WEBHOOK DEBUG] Job '{payload.get('title')}' -> Status {res.status_code}: {res.text[:100]}")
+            except Exception as e:
+                print(f"    [WEBHOOK DEBUG] Request failed: {e}")
         print(f"[N8N INGEST] Sent {success_count}/{len(jobs)} jobs to n8n Webhook.")
         return success_count
