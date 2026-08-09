@@ -118,7 +118,7 @@ MY_RESUME_HTML_TEMPLATE = """<!DOCTYPE html>
 
   <!-- Header -->
   <div class="header">
-    <h1>{{ personal_info.first_name }} {{ personal_info.last_name }}</h1>
+    <h1>{{ name }}</h1>
     {% if personal_info.location %}
     <div class="address">{{ personal_info.location }}</div>
     {% endif %}
@@ -295,6 +295,18 @@ def main():
         for key in ["personal_info", "education", "experience", "projects", "core_skills"]:
             if key not in profile_data or not profile_data[key]:
                 profile_data[key] = sp_data.get(key)
+
+    # Compute candidate name for header h1
+    p_info = profile_data.get("personal_info") or profile_data.get("header") or profile_data.get("contact") or {}
+    full_name = profile_data.get("name") or p_info.get("name")
+    if not full_name:
+        fn = p_info.get("first_name", "")
+        ln = p_info.get("last_name", "")
+        full_name = f"{fn} {ln}".strip()
+    if not full_name:
+        full_name = "Siddharth Bhople"
+
+    profile_data["name"] = full_name
 
     # Determine output path
     if args.output:
