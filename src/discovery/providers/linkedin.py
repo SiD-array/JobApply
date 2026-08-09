@@ -52,13 +52,29 @@ class LinkedInProvider(BaseJobProvider):
                         clean_location = re.sub(r'<[^>]+>', '', card_locations[i]).strip() if i < len(card_locations) else "United States"
                         link = card_links[i].split('?')[0]
 
+                        # Fetch full detailed description from LinkedIn guest endpoint
+                        description_text = f"{clean_title} role at {clean_company}."
+                        try:
+                            job_id = link.rstrip('/').split('-')[-1]
+                            if job_id.isdigit():
+                                detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+                                d_res = requests.get(detail_url, headers=headers, timeout=6)
+                                if d_res.status_code == 200:
+                                    match = re.search(r'<div class="show-more-less-html__markup[\s\S]*?>([\s\S]*?)</div>', d_res.text)
+                                    if match:
+                                        raw_html = match.group(1)
+                                        cleaned = re.sub(r'<[^>]+>', ' ', raw_html)
+                                        description_text = ' '.join(cleaned.split())
+                        except Exception:
+                            pass
+
                         job = Job(
                             title=clean_title,
                             company=clean_company,
                             location=clean_location,
                             employmentType="Full-time",
                             experienceLevel="Entry Level" if "junior" in clean_title.lower() or "intern" in clean_title.lower() else "Associate",
-                            description=f"{clean_title} role at {clean_company}.",
+                            description=description_text,
                             url=link,
                             postedDate=datetime.now().strftime("%Y-%m-%d"),
                             salary="Not specified",
