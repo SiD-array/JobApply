@@ -36,7 +36,7 @@ class LeverProvider(BaseJobProvider):
                 postings = res.json()
                 for item in postings:
                     title = item.get("text", "")
-                    if query.keywords and not any(kw.lower() in title.lower() for kw in query.keywords):
+                    if not self.matches_keyword(title, query.keywords):
                         continue
 
                     categories = item.get("categories", {})

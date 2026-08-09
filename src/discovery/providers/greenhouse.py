@@ -37,7 +37,7 @@ class GreenhouseProvider(BaseJobProvider):
                 for item in data.get("jobs", []):
                     title = item.get("title", "")
                     # Filter by keywords if provided
-                    if query.keywords and not any(kw.lower() in title.lower() for kw in query.keywords):
+                    if not self.matches_keyword(title, query.keywords):
                         continue
 
                     location_name = item.get("location", {}).get("name", "Remote")

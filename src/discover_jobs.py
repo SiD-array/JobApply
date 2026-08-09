@@ -10,6 +10,7 @@ import sys
 import os
 import json
 import argparse
+import datetime
 from typing import List
 
 # Ensure project root is in sys.path
@@ -24,13 +25,24 @@ from src.discovery.engine import DiscoveryEngine
 
 def main():
     parser = argparse.ArgumentParser(description="Multi-Provider Configurable Job Discovery Engine CLI")
-    parser.add_argument("--keywords", nargs="+", default=["AI Engineer", "Machine Learning", "Software Engineer"], help="Search keywords")
+    parser.add_argument(
+        "--keywords",
+        nargs="+",
+        default=[
+            "ML Engineering New Grad",
+            "AI Engineering New Grad",
+            "Data Engineer New Grad",
+            "Software Engineer New Grad",
+            "AI Research Engineer"
+        ],
+        help="Search keywords"
+    )
     parser.add_argument("--location", default="United States", help="Search location")
     parser.add_argument("--providers", nargs="+", choices=["linkedin", "wellfound", "greenhouse", "lever", "ashby", "workday"], help="Filter specific providers")
     parser.add_argument("--limit", type=int, default=5, help="Limit per provider")
     parser.add_argument("--webhook", default="http://localhost:5678/webhook/job-ingest", help="n8n Webhook URL")
     parser.add_argument("--output", default="samples/discovered_jobs.json", help="Save output JSON path")
-    parser.add_argument("--max-age-hours", type=int, help="Filter jobs posted within last X hours")
+    parser.add_argument("--max-age-hours", type=int, default=12, help="Filter jobs posted within last X hours (default: 12)")
     parser.add_argument("--target-passed", type=int, default=0, help="Loop/search until finding at least X jobs passing evaluation")
     parser.add_argument("--profile", default="source_profile.json", help="Path to source candidate profile JSON")
     args = parser.parse_args()
@@ -92,12 +104,21 @@ def main():
     # Convert to JSON dicts
     jobs_dict = [j.to_dict() for j in jobs]
 
-    # Save output
+    # Save standard output
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(jobs_dict, f, indent=2)
 
+    # Save timestamped debug run file
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    debug_dir = os.path.join(os.path.dirname(os.path.abspath(args.output)), "debug_runs")
+    os.makedirs(debug_dir, exist_ok=True)
+    debug_path = os.path.join(debug_dir, f"discovered_jobs_{timestamp}.json")
+    with open(debug_path, "w", encoding="utf-8") as f:
+        json.dump(jobs_dict, f, indent=2)
+
     print(f"\n[SAVED] Saved {len(jobs)} normalized jobs to: {args.output}")
+    print(f"[DEBUG SAVED] Timestamped run saved to: {debug_path}")
 
     # Optionally post to n8n
     if args.webhook:

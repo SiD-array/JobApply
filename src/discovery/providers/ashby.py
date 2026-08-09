@@ -36,7 +36,7 @@ class AshbyProvider(BaseJobProvider):
                 data = res.json()
                 for item in data.get("jobs", []):
                     title = item.get("title", "")
-                    if query.keywords and not any(kw.lower() in title.lower() for kw in query.keywords):
+                    if not self.matches_keyword(title, query.keywords):
                         continue
 
                     location_name = item.get("locationName", "Remote")
