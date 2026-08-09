@@ -281,11 +281,20 @@ def main():
 
     profile_data = raw_data.get("tailoredProfile", raw_data)
 
-    # Normalize key aliases (personal_info vs contact)
-    if "personal_info" not in profile_data and "contact" in profile_data:
+    # Normalize key aliases (personal_info vs contact vs header)
+    if "personal_info" not in profile_data and "header" in profile_data:
+        profile_data["personal_info"] = profile_data["header"]
+    elif "personal_info" not in profile_data and "contact" in profile_data:
         profile_data["personal_info"] = profile_data["contact"]
-    elif "contact" not in profile_data and "personal_info" in profile_data:
-        profile_data["contact"] = profile_data["personal_info"]
+
+    # Fallback to source_profile.json if essential sections are missing
+    sp_path = Path("source_profile.json")
+    if sp_path.exists():
+        with open(sp_path, "r", encoding="utf-8") as sp_f:
+            sp_data = json.load(sp_f)
+        for key in ["personal_info", "education", "experience", "projects", "core_skills"]:
+            if key not in profile_data or not profile_data[key]:
+                profile_data[key] = sp_data.get(key)
 
     # Determine output path
     if args.output:

@@ -200,10 +200,23 @@
     },
     {
       "parameters": {
-        "jsCode": "// Stage 4: Compile ATS PDF Resume & Send Discord Notification with PDF Attachment\nconst inputData = $json;\nconst jobNode = $('Stage 2: Evaluation Gate (Native Code)').item.json || {};\nconst webhookUrl = $('Stage 1: Job Discovery Webhook').item.json.body?.discord_webhook_url || $('Stage 1: Job Discovery Webhook').item.json.discord_webhook_url || \"\";\n\nlet contentRaw = \"\";\nif (inputData.choices && inputData.choices[0] && inputData.choices[0].message) {\n  contentRaw = inputData.choices[0].message.content;\n} else if (inputData.tailored_summary) {\n  contentRaw = inputData;\n} else {\n  contentRaw = inputData.content || JSON.stringify(inputData);\n}\n\nlet tailoredJson = {};\ntry {\n  tailoredJson = typeof contentRaw === 'string' ? JSON.parse(contentRaw) : contentRaw;\n} catch (e) {\n  tailoredJson = {};\n}\n\nlet fs, path, child_process;\ntry {\n  fs = require('fs');\n  path = require('path');\n  child_process = require('child_process');\n} catch (e) {}\n\nlet pdfPath = \"output_resumes/Siddharth_Bhople_Resume.pdf\";\nlet jsonPath = \"output_resumes/tailored_profile.json\";\n\nif (fs && path) {\n  try {\n    const outDir = path.resolve('output_resumes');\n    if (!fs.existsSync(outDir)) {\n      fs.mkdirSync(outDir, { recursive: true });\n    }\n    jsonPath = path.join(outDir, 'tailored_profile.json');\n    fs.writeFileSync(jsonPath, JSON.stringify(tailoredJson, null, 2), 'utf-8');\n\n    // Save job info temp file for notify_discord.py\n    const jobPath = path.join(outDir, 'current_job.json');\n    fs.writeFileSync(jobPath, JSON.stringify(jobNode, null, 2), 'utf-8');\n\n    pdfPath = path.join(outDir, 'Siddharth_Bhople_Resume.pdf');\n\n    if (child_process) {\n      // 1. Compile PDF Resume\n      child_process.execSync(`python src/generate_pdf.py --profile \"${jsonPath}\" --output \"${pdfPath}\"`, { cwd: process.cwd() });\n      \n      // 2. Send Discord notification with binary PDF attachment\n      if (webhookUrl) {\n        child_process.execSync(`python src/notify_discord.py --webhook \"${webhookUrl}\" --job \"${jobPath}\" --pdf \"${pdfPath}\"`, { cwd: process.cwd() });\n      }\n    }\n  } catch (err) {}\n}\n\nreturn {\n  json: {\n    status: \"success\",\n    pdf_path: pdfPath,\n    json_path: jsonPath,\n    tailored_summary: tailoredJson.tailored_summary || \"Tailored specifically for target role requirements.\",\n    matched_keywords: tailoredJson.matched_keywords || [\"Python\", \"Machine Learning\"],\n    ats_coverage_score: tailoredJson.ats_coverage_score || \"9/10\"\n  }\n};"
+        "method": "POST",
+        "url": "http://127.0.0.1:8765/generate-pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ choices: $json.choices, job: $('Stage 2: Evaluation Gate (Native Code)').item.json, discord_webhook_url: $('Stage 1: Job Discovery Webhook').item.json.body?.discord_webhook_url || $('Stage 1: Job Discovery Webhook').item.json.discord_webhook_url }) }}"
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
       "position": [
         1380,
         280
