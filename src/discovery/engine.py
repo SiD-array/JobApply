@@ -26,6 +26,62 @@ from src.discovery.providers import (
 )
 
 
+import re
+
+def is_us_or_remote_location(location: str) -> bool:
+    """
+    Verify if the location is in the United States or is Remote.
+    """
+    loc_lower = location.lower().strip()
+    
+    # 1. If it explicitly states Remote
+    if "remote" in loc_lower or "anywhere" in loc_lower:
+        return True
+        
+    # 2. Check for non-US countries first (Exclusions)
+    non_us_indicators = [
+        "united kingdom", " uk", ", uk", "london", "england", "great britain", "gb",
+        "india", "mumbai", "bangalore", "delhi",
+        "germany", "berlin", "munich",
+        "canada", "toronto", "vancouver", "montreal", "ontario", "bc", "quebec",
+        "singapore", "australia", "sydney", "melbourne",
+        "france", "paris", "spain", "madrid", "barcelona",
+        "netherlands", "amsterdam", "poland", "warsaw",
+        "europe", "apac", "emea", "latam"
+    ]
+    for indicator in non_us_indicators:
+        if indicator in loc_lower:
+            return False
+            
+    # 3. If it contains US country markers
+    us_indicators = ["united states", "usa", "us", "u.s.", "u.s.a.", "america"]
+    for indicator in us_indicators:
+        if indicator in loc_lower:
+            return True
+            
+    # 4. Check for US state 2-letter codes or full names
+    us_states = {
+        "al", "ak", "az", "ar", "ca", "co", "ct", "de", "fl", "ga", "hi", "id", "il", "in", "ia", "ks", "ky", "la", "me", "md",
+        "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj", "nm", "ny", "nc", "nd", "oh", "ok", "or", "pa", "ri", "sc",
+        "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv", "wi", "wy",
+        "alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut", "delaware", "florida", "georgia",
+        "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine", "maryland",
+        "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire",
+        "new jersey", "new mexico", "new york", "north carolina", "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania",
+        "rhode island", "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont", "virginia", "washington",
+        "west virginia", "wisconsin", "wyoming", "district of columbia", "dc", "d.c."
+    }
+    
+    # Extract words or split by comma/space
+    words = re.split(r'[\s,\.\/]+', loc_lower)
+    for w in words:
+        if w in us_states:
+            return True
+            
+    # Default to True if we couldn't classify it (to avoid missing valid US jobs)
+    return True
+
+
 class DiscoveryEngine:
     """Engine for orchestrating multi-provider job discovery."""
 
@@ -107,6 +163,10 @@ class DiscoveryEngine:
         for limit in thresholds:
             passed = []
             for job in jobs:
+                # Location Filter (Restrict to United States or Remote)
+                if not is_us_or_remote_location(job.location):
+                    continue
+
                 if limit:
                     try:
                         post_dt = datetime.datetime.strptime(job.postedDate, "%Y-%m-%d")
