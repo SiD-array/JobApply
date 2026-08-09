@@ -75,30 +75,57 @@ class DiscoveryEngine:
                 provider = future_to_provider[future]
                 try:
                     jobs = future.result()
-                    count = 0
-                    for job in jobs:
-                        # Age Filter
-                        if query.max_age_hours:
-                            try:
-                                post_dt = datetime.strptime(job.postedDate, "%Y-%m-%d")
-                                delta_days = (datetime.now() - post_dt).days
-                                if delta_days * 24 > query.max_age_hours:
-                                    continue
-                            except Exception:
-                                pass
-
-                        key = f"{job.title.lower()}_{job.company.lower()}"
-                        if job.url not in seen_urls and key not in seen_keys:
-                            seen_urls.add(job.url)
-                            seen_keys.add(key)
-                            all_jobs.append(job)
-                            count += 1
-                    print(f"  + {provider.name}: Found {count} unique jobs")
+                    filtered_jobs = self._filter_and_deduplicate(jobs, query.max_age_hours, seen_urls, seen_keys)
+                    all_jobs.extend(filtered_jobs)
+                    print(f"  + {provider.name}: Found {len(filtered_jobs)} unique jobs (relaxed age limit if needed)")
                 except Exception as e:
                     print(f"  x {provider.name} failed: {e}", file=sys.stderr)
 
         print(f"\n[DISCOVERY COMPLETE] Total normalized unique jobs: {len(all_jobs)}")
         return all_jobs
+
+    def _filter_and_deduplicate(self, jobs: List[Job], max_age_hours: int, seen_urls: set, seen_keys: set) -> List[Job]:
+        """
+        Filter a list of jobs by age and deduplicate them.
+        Attempts to use the specified age filter. If 0 jobs pass, relaxes the age filter.
+        """
+        if not jobs:
+            return []
+
+        # Progressive age threshold relaxations: target limit -> 2x -> 4x -> None (no limit)
+        thresholds = [max_age_hours] if max_age_hours else [None]
+        if max_age_hours:
+            thresholds.append(max_age_hours * 2)
+            thresholds.append(max_age_hours * 4)
+            thresholds.append(None)
+
+        import datetime
+
+        for limit in thresholds:
+            passed = []
+            for job in jobs:
+                if limit:
+                    try:
+                        post_dt = datetime.datetime.strptime(job.postedDate, "%Y-%m-%d")
+                        delta_days = (datetime.datetime.now() - post_dt).days
+                        if delta_days * 24 > limit:
+                            continue
+                    except Exception:
+                        pass
+
+                key = f"{job.title.lower()}_{job.company.lower()}"
+                if job.url not in seen_urls and key not in seen_keys:
+                    passed.append(job)
+
+            if passed or not limit:
+                # Add to deduplication sets and return
+                for job in passed:
+                    key = f"{job.title.lower()}_{job.company.lower()}"
+                    seen_urls.add(job.url)
+                    seen_keys.add(key)
+                return passed
+
+        return []
 
     def send_to_n8n(self, jobs: List[Job], webhook_url: str) -> int:
         """Send discovered Job models to n8n Webhook."""
