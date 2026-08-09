@@ -51,18 +51,4 @@ class WellFoundProvider(BaseJobProvider):
         except Exception as e:
             print(f"[{self.name} ERROR] Failed to fetch WellFound jobs: {e}", file=sys.stderr)
 
-        if not jobs:
-            jobs.append(Job(
-                title=f"Startup {kw}",
-                company="Stealth AI Startup",
-                location="San Francisco, CA / Remote",
-                employmentType="Full-time",
-                experienceLevel="Entry Level / Early Career",
-                description=f"Join an early-stage venture-backed AI startup working on {kw}.",
-                url="https://wellfound.com/jobs/sample",
-                postedDate=datetime.now().strftime("%Y-%m-%d"),
-                salary="$120,000 - $160,000 + 0.2% Equity",
-                source=self.name
-            ))
-
         return jobs

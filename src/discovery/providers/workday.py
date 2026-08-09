@@ -66,19 +66,4 @@ class WorkdayProvider(BaseJobProvider):
                 # Silently handle Workday CORS/endpoint variations
                 pass
 
-        # Fallback sample if Workday endpoint requires specific session token
-        if not jobs:
-            jobs.append(Job(
-                title=f"Enterprise {query.keywords[0] if query.keywords else 'Software Engineer'}",
-                company="NVIDIA (Workday)",
-                location="Santa Clara, CA / Remote",
-                employmentType="Full-time",
-                experienceLevel="Early Career / University Hire",
-                description=f"Workday Enterprise posting for {query.keywords[0] if query.keywords else 'Software Engineer'}.",
-                url="https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite",
-                postedDate=datetime.now().strftime("%Y-%m-%d"),
-                salary="$130,000 - $175,000 / year",
-                source=self.name
-            ))
-
         return jobs

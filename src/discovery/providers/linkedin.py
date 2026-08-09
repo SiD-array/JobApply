@@ -72,19 +72,4 @@ class LinkedInProvider(BaseJobProvider):
             except Exception as e:
                 print(f"[{self.name} ERROR] Failed to fetch LinkedIn jobs for '{kw}': {e}", file=sys.stderr)
 
-        # Fallback dummy sample if guest API is rate-limited
-        if not jobs:
-            jobs.append(Job(
-                title=f"{query.keywords[0] if query.keywords else 'AI Software Engineer'}",
-                company="LinkedIn Featured Tech",
-                location=query.location,
-                employmentType="Full-time",
-                experienceLevel="Entry Level",
-                description=f"Exciting opportunity for {query.keywords[0] if query.keywords else 'AI Engineer'} at a leading technology firm.",
-                url="https://www.linkedin.com/jobs/view/1000000001",
-                postedDate=datetime.now().strftime("%Y-%m-%d"),
-                salary="$110,000 - $140,000 / year",
-                source=self.name
-            ))
-
         return jobs
