@@ -121,7 +121,7 @@ def main():
     print(f"[DEBUG SAVED] Timestamped run saved to: {debug_path}")
 
     # Optionally post to n8n
-    if args.webhook:
+    if args.webhook and args.webhook.lower() not in ["none", "null", "disabled", "false"]:
         engine.send_to_n8n(jobs, args.webhook)
 
 
