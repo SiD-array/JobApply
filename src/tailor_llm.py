@@ -221,7 +221,7 @@ Description:
         if self.provider:
             order.append(self.provider)
 
-        for p in ["ollama", "groq", "cerebras", "gemini", "openrouter"]:
+        for p in ["ollama", "groq", "gemini", "openrouter"]:
             if p not in order:
                 order.append(p)
 
@@ -241,11 +241,6 @@ Description:
                     if not api_key:
                         raise ValueError("GROQ_API_KEY not found in environment")
                     raw_response = self._call_groq(prompt, api_key)
-                elif p == "cerebras":
-                    api_key = os.getenv("CEREBRAS_API_KEY")
-                    if not api_key:
-                        raise ValueError("CEREBRAS_API_KEY not found in environment")
-                    raw_response = self._call_cerebras(prompt, api_key)
                 elif p == "gemini":
                     api_key = os.getenv("GEMINI_API_KEY")
                     if not api_key:
@@ -315,52 +310,6 @@ Description:
             return res.json()["choices"][0]["message"]["content"]
         raise RuntimeError(f"Groq API Error {res.status_code}: {res.text}")
 
-    def _call_cerebras(self, prompt: str, api_key: str) -> str:
-        url = "https://api.cerebras.ai/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
-        payload = {
-            "model": "gemma-4-31b",
-            "messages": [
-                {"role": "system", "content": TAILOR_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.2,
-            "response_format": {"type": "json_object"}
-        }
-        res = requests.post(url, headers=headers, json=payload, timeout=30)
-        if res.status_code == 200:
-            return res.json()["choices"][0]["message"]["content"]
-        raise RuntimeError(f"Cerebras API Error {res.status_code}: {res.text}")
-
-    def _call_openrouter(self, prompt: str, api_key: str) -> str:
-        url = "https://openrouter.ai/api/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
-        payload = {
-            "model": "google/gemma-4-31b-it:free",
-            "messages": [
-                {"role": "system", "content": TAILOR_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.2,
-            "response_format": {"type": "json_object"}
-        }
-        res = requests.post(url, headers=headers, json=payload, timeout=30)
-        if res.status_code == 200:
-            return res.json()["choices"][0]["message"]["content"]
-        raise RuntimeError(f"OpenRouter API Error {res.status_code}: {res.text}")
-
-    def _call_gemini(self, prompt: str, api_key: str) -> str:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key.strip()}"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [{"parts": [{"text": f"{TAILOR_SYSTEM_PROMPT}\n\n{prompt}"}]}],
-            "generationConfig": {"response_mime_type": "application/json"}
-        }
-        res = requests.post(url, headers=headers, json=payload, timeout=30)
-        if res.status_code == 200:
-            return res.json()["candidates"][0]["content"]["parts"][0]["text"]
-        raise RuntimeError(f"Gemini API Error {res.status_code}: {res.text}")
-
     def _call_ollama(self, prompt: str, base_url: str, model: str) -> str:
         url = f"{base_url.rstrip('/')}/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
@@ -374,7 +323,7 @@ Description:
             "stream": False,
             "response_format": {"type": "json_object"}
         }
-        res = requests.post(url, headers=headers, json=payload, timeout=60)
+        res = requests.post(url, headers=headers, json=payload, timeout=120)
         if res.status_code == 200:
             return res.json()["choices"][0]["message"]["content"]
         raise RuntimeError(f"Ollama API Error {res.status_code}: {res.text}")
@@ -384,7 +333,7 @@ def main():
     parser = argparse.ArgumentParser(description="Stage 3 LLM Resume Tailor CLI")
     parser.add_argument("--profile", default="source_profile.json", help="Path to source_profile.json")
     parser.add_argument("--job", default="samples/ai_engineer_job.json", help="Path to job JSON file")
-    parser.add_argument("--provider", default="ollama", choices=["groq", "cerebras", "openrouter", "gemini", "ollama"], help="AI Provider")
+    parser.add_argument("--provider", default="ollama", choices=["groq", "openrouter", "gemini", "ollama"], help="AI Provider")
     parser.add_argument("--output", default="output_resumes/tailored_profile.json", help="Output tailored profile JSON path")
     args = parser.parse_args()
 

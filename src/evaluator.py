@@ -102,7 +102,7 @@ Description:
         if self.provider:
             order.append(self.provider)
 
-        for p in ["ollama", "groq", "cerebras", "openrouter"]:
+        for p in ["ollama", "groq", "openrouter"]:
             if p not in order:
                 order.append(p)
 
@@ -121,11 +121,6 @@ Description:
                     if not api_key:
                         raise ValueError("GROQ_API_KEY not set")
                     return self._call_groq(prompt, api_key)
-                elif p == "cerebras":
-                    api_key = os.getenv("CEREBRAS_API_KEY")
-                    if not api_key:
-                        raise ValueError("CEREBRAS_API_KEY not set")
-                    return self._call_cerebras(prompt, api_key)
                 elif p == "openrouter":
                     api_key = os.getenv("OPENROUTER_API_KEY")
                     return self._call_openrouter(prompt, api_key)
@@ -185,28 +180,11 @@ Description:
             return json.loads(res.json()["choices"][0]["message"]["content"])
         raise RuntimeError(f"Groq API Error {res.status_code}: {res.text}")
 
-    def _call_cerebras(self, prompt: str, api_key: str) -> dict:
-        url = "https://api.cerebras.ai/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
-        payload = {
-            "model": "llama3.1-8b",
-            "messages": [
-                {"role": "system", "content": RECRUITER_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.1,
-            "response_format": {"type": "json_object"}
-        }
-        res = requests.post(url, headers=headers, json=payload, timeout=25)
-        if res.status_code == 200:
-            return json.loads(res.json()["choices"][0]["message"]["content"])
-        raise RuntimeError(f"Cerebras API Error {res.status_code}: {res.text}")
-
     def _call_openrouter(self, prompt: str, api_key: str) -> dict:
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
-            "model": "meta-llama/llama-3-8b-instruct:free",
+            "model": "google/gemma-4-31b-it:free",
             "messages": [
                 {"role": "system", "content": RECRUITER_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
@@ -232,7 +210,7 @@ Description:
             "stream": False,
             "response_format": {"type": "json_object"}
         }
-        res = requests.post(url, headers=headers, json=payload, timeout=45)
+        res = requests.post(url, headers=headers, json=payload, timeout=120)
         if res.status_code == 200:
             return json.loads(res.json()["choices"][0]["message"]["content"])
         raise RuntimeError(f"Ollama API Error {res.status_code}: {res.text}")
@@ -272,7 +250,7 @@ def main():
     parser = argparse.ArgumentParser(description="Stage 2 AI Recruiter Job Evaluator CLI")
     parser.add_argument("--profile", default="source_profile.json", help="Path to source_profile.json")
     parser.add_argument("--job", default="samples/ai_engineer_job.json", help="Path to job JSON file or text")
-    parser.add_argument("--provider", default="ollama", choices=["ollama", "groq", "cerebras", "openrouter"], help="AI Provider")
+    parser.add_argument("--provider", default="ollama", choices=["ollama", "groq", "openrouter"], help="AI Provider")
     parser.add_argument("--threshold", type=float, default=70.0, help="Passing threshold score")
     args = parser.parse_args()
 

@@ -278,7 +278,7 @@ TARGET JOB DESCRIPTION:
         order = []
         if self.provider:
             order.append(self.provider)
-        for p in ["ollama", "groq", "cerebras", "openrouter"]:
+        for p in ["ollama", "groq", "openrouter"]:
             if p not in order:
                 order.append(p)
 
@@ -300,7 +300,7 @@ TARGET JOB DESCRIPTION:
                         "temperature": 0.1,
                         "response_format": {"type": "json_object"}
                     }
-                    res = requests.post(url, json=payload, timeout=50)
+                    res = requests.post(url, json=payload, timeout=120)
                     if res.status_code == 200:
                         return json.loads(res.json()["choices"][0]["message"]["content"])
                     raise RuntimeError(f"Ollama Error: {res.text}")
@@ -324,26 +324,6 @@ TARGET JOB DESCRIPTION:
                     if res.status_code == 200:
                         return json.loads(res.json()["choices"][0]["message"]["content"])
                     raise RuntimeError(f"Groq Error: {res.text}")
-
-                elif p == "cerebras":
-                    api_key = os.getenv("CEREBRAS_API_KEY")
-                    if not api_key:
-                        raise ValueError("CEREBRAS_API_KEY not set")
-                    url = "https://api.cerebras.ai/v1/chat/completions"
-                    headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
-                    payload = {
-                        "model": "gemma-4-31b",
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
-                        "temperature": 0.1,
-                        "response_format": {"type": "json_object"}
-                    }
-                    res = requests.post(url, headers=headers, json=payload, timeout=25)
-                    if res.status_code == 200:
-                        return json.loads(res.json()["choices"][0]["message"]["content"])
-                    raise RuntimeError(f"Cerebras Error: {res.text}")
 
                 elif p == "openrouter":
                     api_key = os.getenv("OPENROUTER_API_KEY")

@@ -37,7 +37,7 @@ def main():
     parser.add_argument("--job", help="Path to job JSON or Markdown description file")
     parser.add_argument("--title", default="Software / AI Engineer", help="Job Title if providing text")
     parser.add_argument("--company", default="Target Company", help="Company Name if providing text")
-    parser.add_argument("--provider", default="ollama", choices=["groq", "cerebras", "openrouter", "gemini", "ollama"], help="AI Provider")
+    parser.add_argument("--provider", default="ollama", choices=["groq", "openrouter", "gemini", "ollama"], help="AI Provider")
     parser.add_argument("--force-apply", action="store_true", help="Proceed even if evaluation fit score is < 70%%")
     args = parser.parse_args()
 
@@ -58,7 +58,7 @@ def main():
             json.dump(job_payload, f, indent=2)
 
     print("="*60)
-    print("🚀 STARTING AUTOMATED JOB APPLICATION PIPELINE")
+    print("[PIPELINE] STARTING AUTOMATED JOB APPLICATION PIPELINE")
     print("="*60)
 
     # 0. Sync and select GitHub projects dynamically
@@ -90,10 +90,10 @@ def main():
     eval_json = json.loads(eval_out)
     score = eval_json.get("score", 0.0)
     passed = eval_json.get("passed", False)
-    print(f"📊 Fit Match Score: {score}% | Recommendation: {'PASS' if passed else 'REJECT'}")
+    print(f"[FIT SCORE] Fit Match Score: {score}% | Recommendation: {'PASS' if passed else 'REJECT'}")
 
     if not passed and not args.force_apply:
-        print(f"❌ Match score {score}% is below threshold of 70%. Halting pipeline to save time & credits.")
+        print(f"[REJECT] Match score {score}% is below threshold of 70%. Halting pipeline to save time & credits.")
         print("Tip: Use --force-apply flag to proceed anyway.")
         # Cleanup temp profile before exiting
         if os.path.exists(temp_profile_path):
@@ -111,7 +111,7 @@ def main():
     output_pdf_path = os.path.join("output_resumes", "Siddharth_Bhople_Resume.pdf")
     pdf_script = os.path.join("src", "generate_pdf.py")
     run_command([pdf_script, "--profile", tailored_json_path, "--job-id", "Siddharth_Bhople", "--output", output_pdf_path])
-    print(f"📄 ATS Resume compiled to: {os.path.abspath(output_pdf_path)}")
+    print(f"[PDF] ATS Resume compiled to: {os.path.abspath(output_pdf_path)}")
 
     # 4. Stage 5: Discord Notification
     print("\n--- STAGE 5: DISCORD HITL NOTIFICATION ---")
@@ -119,7 +119,7 @@ def main():
     try:
         run_command([discord_script, "--pdf", output_pdf_path, "--score", str(score), "--job", job_file_path])
     except Exception as e:
-        print(f"⚠️ Discord notification warning: {e}")
+        print(f"[WARNING] Discord notification warning: {e}")
 
     # 5. Stage 5: Playwright Auto-Fill Form & Review
     print("\n--- STAGE 5: PLAYWRIGHT ATS FORM AUTO-FILL ---")
@@ -131,7 +131,7 @@ def main():
     if os.path.exists(temp_profile_path):
         os.remove(temp_profile_path)
 
-    print("\n✅ PIPELINE EXECUTION COMPLETE!")
+    print("\n[SUCCESS] PIPELINE EXECUTION COMPLETE!")
 
 
 if __name__ == "__main__":
