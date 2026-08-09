@@ -40,7 +40,7 @@ def main():
     parser.add_argument("--location", default="United States", help="Search location")
     parser.add_argument("--providers", nargs="+", choices=["linkedin", "wellfound", "greenhouse", "lever", "ashby", "workday"], help="Filter specific providers")
     parser.add_argument("--limit", type=int, default=5, help="Limit per provider")
-    parser.add_argument("--webhook", default="http://localhost:5678/webhook/job-ingest", help="n8n Webhook URL")
+    parser.add_argument("--webhook", nargs="?", const="none", default="http://localhost:5678/webhook/job-ingest", help="n8n Webhook URL")
     parser.add_argument("--output", default="samples/discovered_jobs.json", help="Save output JSON path")
     parser.add_argument("--max-age-hours", type=int, default=12, help="Filter jobs posted within last X hours (default: 12)")
     parser.add_argument("--target-passed", type=int, default=0, help="Loop/search until finding at least X jobs passing evaluation")
