@@ -221,11 +221,22 @@ Description:
         desc = job.get("description", "").lower()
         full_text = f"{title} {desc}"
 
-        core_skills = profile.get("core_skills", ["Python", "PyTorch", "FastAPI", "AWS"])
+        core_skills = profile.get("core_skills", ["Python", "PyTorch", "FastAPI", "AWS", "C++", "Java", "TensorFlow", "SQL", "Git"])
         matched = [s for s in core_skills if s.lower() in full_text]
         missing = [s for s in core_skills if s not in matched]
 
-        score = min(100, int((len(matched) / max(len(core_skills), 1)) * 100 * 1.4))
+        # Calculate score based on skills requested in JD and title alignment
+        target_kws = ["software", "engineer", "ml", "ai", "machine learning", "data", "research", "new grad", "developer", "backend", "systems"]
+        title_matches = [kw for kw in target_kws if kw in title or kw in desc]
+        title_rel = min(len(title_matches) / 3.0, 1.0)
+
+        if len(matched) >= 3:
+            score = min(100, int(85 + (title_rel * 15)))
+        elif len(matched) > 0:
+            score = min(100, int(70 + (title_rel * 15)))
+        else:
+            score = min(100, int(50 + (title_rel * 20)))
+
         passed = score >= threshold
 
         return {
