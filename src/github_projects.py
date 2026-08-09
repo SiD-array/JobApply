@@ -165,6 +165,11 @@ class GitHubProjectsManager:
                     # Preserve priority if exists, default to 2
                     priority = existing_entry.get("priority", 2) if existing_entry else 2
 
+                    # Preserve date if exists, default to repo created date
+                    created_at = repo.get("created_at")
+                    date_str = created_at[:7] if created_at else datetime.datetime.now().strftime("%Y-%m")
+                    date_val = existing_entry.get("date") if existing_entry else date_str
+
                     library[name] = {
                         "name": existing_entry.get("name", name.replace("-", " ").title()) if existing_entry else name.replace("-", " ").title(),
                         "description": description,
@@ -172,7 +177,8 @@ class GitHubProjectsManager:
                         "bullet_points": bullets,
                         "priority": priority,
                         "github_repo": name,
-                        "last_updated": pushed_at
+                        "last_updated": pushed_at,
+                        "date": date_val
                     }
                     library_changed = True
                     print(f"[SYNC SUCCESS] Updated local library details for: {name}", file=sys.stderr)
@@ -243,7 +249,8 @@ TARGET JOB DESCRIPTION:
                 selected_projects.append({
                     "name": proj_data.get("name"),
                     "technologies": proj_data.get("technologies"),
-                    "bullet_points": proj_data.get("bullet_points")
+                    "bullet_points": proj_data.get("bullet_points"),
+                    "date": proj_data.get("date", "")
                 })
 
         # Ensure we always return at least the requested limit if we have enough projects
@@ -253,7 +260,8 @@ TARGET JOB DESCRIPTION:
                     selected_projects.append({
                         "name": proj_data.get("name"),
                         "technologies": proj_data.get("technologies"),
-                        "bullet_points": proj_data.get("bullet_points")
+                        "bullet_points": proj_data.get("bullet_points"),
+                        "date": proj_data.get("date", "")
                     })
 
         print(f"[AI PROJECT SELECTION] Featured projects: {', '.join([p['name'] for p in selected_projects])}", file=sys.stderr)
@@ -324,7 +332,7 @@ TARGET JOB DESCRIPTION:
                     url = "https://api.cerebras.ai/v1/chat/completions"
                     headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
                     payload = {
-                        "model": "llama3.1-8b",
+                        "model": "gemma-4-31b",
                         "messages": [
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
@@ -342,7 +350,7 @@ TARGET JOB DESCRIPTION:
                     url = "https://openrouter.ai/api/v1/chat/completions"
                     headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
                     payload = {
-                        "model": "meta-llama/llama-3-8b-instruct:free",
+                        "model": "google/gemma-4-31b-it:free",
                         "messages": [
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}

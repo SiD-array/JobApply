@@ -48,28 +48,102 @@ def merge_tailored_resume(source_profile: dict, tailored_data: dict) -> dict:
     reordered_skills += [s for s in skills if s.strip().lower() not in matched_set]
     profile["core_skills"] = reordered_skills
     
-    # 3. Update work experience bullet points
+    # 3. Update work experience details
     tailored_exp_map = {
-        item["company"].strip().lower(): item["bullet_points"]
+        item["company"].strip().lower(): item
         for item in tailored_data.get("tailored_experience", [])
-        if "company" in item and "bullet_points" in item
+        if "company" in item
     }
     for exp in profile.get("experience", []):
         company_key = exp.get("company", "").strip().lower()
         if company_key in tailored_exp_map:
-            exp["bullet_points"] = tailored_exp_map[company_key]
+            item = tailored_exp_map[company_key]
+            if "bullet_points" in item:
+                exp["bullet_points"] = item["bullet_points"]
+            if "location" in item:
+                exp["location"] = item["location"]
             
-    # 4. Update featured projects bullet points
-    tailored_proj_map = {
-        item["name"].strip().lower(): item["bullet_points"]
-        for item in tailored_data.get("featured_projects", [])
-        if "name" in item and "bullet_points" in item
-    }
-    for proj in profile.get("projects", []):
-        proj_key = proj.get("name", "").strip().lower()
-        if proj_key in tailored_proj_map:
-            proj["bullet_points"] = tailored_proj_map[proj_key]
+            # Parse and split tailored date_range
+            range_str = item.get("date_range", "")
+            if range_str:
+                parts = []
+                for sep in ["–", "—", "-"]:
+                    if sep in range_str:
+                        parts = [p.strip() for p in range_str.split(sep) if p.strip()]
+                        break
+                if len(parts) == 2:
+                    exp["start_date"] = parts[0]
+                    exp["end_date"] = parts[1]
+                else:
+                    exp["start_date"] = range_str
+                    exp["end_date"] = ""
             
+    # 4. Update featured projects bullet points & reorder them
+    reordered_projects = []
+    featured_list = tailored_data.get("featured_projects", [])
+    featured_names = {p.get("name", "").strip().lower() for p in featured_list if "name" in p}
+    
+    # First, append projects in the order specified by the LLM
+    for item in featured_list:
+        proj_name = item.get("name", "").strip().lower()
+        original_proj = None
+        for p in profile.get("projects", []):
+            if p.get("name", "").strip().lower() == proj_name:
+                original_proj = copy.deepcopy(p)
+                break
+        if original_proj:
+            original_proj["bullet_points"] = item.get("bullet_points", original_proj["bullet_points"])
+            if "tech_stack" in item:
+                techs = item["tech_stack"]
+                if isinstance(techs, str):
+                    techs = [t.strip() for t in techs.split(",") if t.strip()]
+                original_proj["technologies"] = techs
+            if "date" in item:
+                original_proj["date"] = item["date"]
+            reordered_projects.append(original_proj)
+
+    # Add any remaining projects that were not in the featured_projects list to the end
+    for p in profile.get("projects", []):
+        if p.get("name", "").strip().lower() not in featured_names:
+            reordered_projects.append(p)
+            
+    profile["projects"] = reordered_projects
+
+    # 5. Map tailored skills categories to skill_categories in profile
+    tailored_skills = tailored_data.get("tailored_skills", {})
+    if tailored_skills:
+        categories = {}
+        key_mapping = {
+            "languages": "Languages",
+            "ai_ml": "AI/ML",
+            "frameworks_tools": "Frameworks & Tools",
+            "cloud_databases": "Cloud & Databases",
+            "ai_apis": "AI APIs"
+        }
+        for k, v in tailored_skills.items():
+            display_name = key_mapping.get(k, k.replace("_", " ").title())
+            if v:
+                categories[display_name] = v
+    # 6. Map tailored header to personal_info in profile
+    header = tailored_data.get("header", {})
+    if header:
+        p_info = profile.setdefault("personal_info", {})
+        name = header.get("name", "")
+        if name:
+            parts = name.split(None, 1)
+            p_info["first_name"] = parts[0]
+            p_info["last_name"] = parts[1] if len(parts) > 1 else ""
+        if "phone" in header:
+            p_info["phone"] = header["phone"]
+        if "email" in header:
+            p_info["email"] = header["email"]
+        if "linkedin" in header:
+            p_info["linkedin"] = header["linkedin"]
+        if "github" in header:
+            p_info["github"] = header["github"]
+        if "location" in header:
+            p_info["location"] = header["location"]
+
     return profile
 
 
@@ -126,7 +200,10 @@ Description:
                 "tailoredProfile": tailored_profile,
                 "summaryOfChanges": changes,
                 "atsKeywordCoverage": coverage,
-                "estimatedAtsScore": estimated_score
+                "estimatedAtsScore": estimated_score,
+                "unmatchedKeywords": validated_data.get("unmatched_keywords", []),
+                "projectOrderRationale": validated_data.get("project_order_rationale", ""),
+                "atsCoverageScore": validated_data.get("ats_coverage_score", "")
             }
 
         except Exception as e:
@@ -242,7 +319,7 @@ Description:
         url = "https://api.cerebras.ai/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
-            "model": "llama3.1-8b",
+            "model": "gemma-4-31b",
             "messages": [
                 {"role": "system", "content": TAILOR_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
@@ -259,7 +336,7 @@ Description:
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"}
         payload = {
-            "model": "meta-llama/llama-3-8b-instruct:free",
+            "model": "google/gemma-4-31b-it:free",
             "messages": [
                 {"role": "system", "content": TAILOR_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
@@ -331,6 +408,12 @@ def main():
     print(f"[TAILOR SUCCESS] Saved tailored profile to: {args.output}")
     print(f"Summary of Changes: {json.dumps(result.get('summaryOfChanges', []), indent=2)}")
     print(f"Estimated ATS Score: {result.get('estimatedAtsScore', 85)}/100")
+    if result.get("projectOrderRationale"):
+        print(f"Project Order Rationale: {result['projectOrderRationale']}")
+    if result.get("atsCoverageScore"):
+        print(f"ATS Coverage Score: {result['atsCoverageScore']}")
+    if result.get("unmatchedKeywords"):
+        print(f"Unmatched Keywords (Not in profile): {', '.join(result['unmatchedKeywords'])}")
 
 
 if __name__ == "__main__":
