@@ -27,9 +27,11 @@ def send_discord_notification(
     eval_result: dict,
     job_info: dict,
     pdf_path: str = None,
-    cover_pdf_path: str = None
+    cover_pdf_path: str = None,
+    tailored_data: dict = None,
+    cover_letter_text: str = None
 ) -> bool:
-    """Send redesigned rich embed notification and PDF file attachments to Discord."""
+    """Send redesigned rich embed notification with Tailored Resume summary, Cover Letter, and PDF file attachments to Discord."""
 
     company = job_info.get("company") or eval_result.get("company") or "Target Company"
     title = job_info.get("title") or eval_result.get("title") or "Software / AI Engineer"
@@ -40,9 +42,14 @@ def send_discord_notification(
 
     score = eval_result.get("score", 85)
     interview_prob = eval_result.get("interviewProbability", "High")
-    matched_skills = eval_result.get("matchedSkills") or eval_result.get("matched_skills") or []
-    missing_skills = eval_result.get("missingSkills") or eval_result.get("missing_skills") or []
+    matched_skills = eval_result.get("matchedSkills") or eval_result.get("matched_skills") or (tailored_data.get("matched_keywords") if tailored_data else []) or []
+    missing_skills = eval_result.get("missingSkills") or eval_result.get("missing_skills") or (tailored_data.get("unmatched_keywords") if tailored_data else []) or []
     reason = eval_result.get("reason", "Strong alignment across target roles, technical stack, and career level.")
+
+    # Tailored fields from Stage 3
+    summary_text = (tailored_data.get("tailored_summary") if tailored_data else "") or reason
+    project_rationale = (tailored_data.get("project_order_rationale") if tailored_data else "") or "Top 3 relevant projects selected."
+    ats_score = (tailored_data.get("ats_coverage_score") if tailored_data else "") or "9/10"
 
     # Determine Embed Color
     if score >= 80:
@@ -61,36 +68,40 @@ def send_discord_notification(
     resume_status = f"✅ `{os.path.basename(pdf_path)}`" if (pdf_path and os.path.exists(pdf_path)) else "❌ Not generated"
     cover_status = f"✅ `{os.path.basename(cover_pdf_path)}`" if (cover_pdf_path and os.path.exists(cover_pdf_path)) else "❌ Not generated"
 
+    fields = [
+        {"name": "🏢 Company", "value": f"**{company}**", "inline": True},
+        {"name": "💼 Role", "value": f"**{title}**", "inline": True},
+        {"name": "📊 Match Fit Score", "value": f"**{score}% ({prob_emoji})**", "inline": True},
+
+        {"name": "📝 Tailored Resume Summary", "value": f"*{summary_text}*", "inline": False},
+        {"name": "🔑 Matched Keywords", "value": f"`{matched_str}`", "inline": False},
+        {"name": "🚀 Featured Projects Rationale", "value": f"*{project_rationale}*", "inline": False},
+        {"name": "🎯 ATS Coverage Score", "value": f"`{ats_score}`", "inline": True},
+
+        {"name": "📄 Resume PDF Ready", "value": resume_status, "inline": True},
+        {"name": "✉️ Cover Letter PDF Ready", "value": cover_status, "inline": True},
+    ]
+
+    # Add Cover Letter Snippet if provided
+    if cover_letter_text:
+        snippet = cover_letter_text[:400] + "..." if len(cover_letter_text) > 400 else cover_letter_text
+        fields.append({"name": "✉️ Tailored Cover Letter Preview", "value": f"```{snippet}```", "inline": False})
+
+    fields.append({
+        "name": "⚡ Quick Actions & Links",
+        "value": (
+            f"🔗 [**Open Job Posting**]({apply_url})\n"
+            f"✅ [**Approve Application**](http://localhost:5678/webhook/approve?job_id={job_id})\n"
+            f"❌ [**Reject Application**](http://localhost:5678/webhook/reject?job_id={job_id})"
+        ),
+        "inline": False
+    })
+
     embed = {
-        "title": f"🎯 Job Match Approval Request: {title} @ {company}",
-        "description": f"**Quick Summary**:\n*{reason}*\n\n---",
+        "title": f"🎯 Tailored Job Match Ready: {title} @ {company}",
         "url": apply_url if apply_url.startswith("http") else None,
         "color": color,
-        "fields": [
-            {"name": "🏢 Company", "value": f"**{company}**", "inline": True},
-            {"name": "💼 Role", "value": f"**{title}**", "inline": True},
-            {"name": "📍 Location", "value": location, "inline": True},
-
-            {"name": "📌 Source", "value": f"`{source}`", "inline": True},
-            {"name": "📊 Overall Score", "value": f"**{score} / 100**", "inline": True},
-            {"name": "🎯 Interview Prob", "value": f"**{prob_emoji}**", "inline": True},
-
-            {"name": "✅ Matched Skills", "value": f"`{matched_str}`", "inline": False},
-            {"name": "⚠️ Missing Skills", "value": f"`{missing_str}`" if missing_skills else "`None`", "inline": False},
-
-            {"name": "📄 Resume Ready", "value": resume_status, "inline": True},
-            {"name": "✉️ Cover Letter Ready", "value": cover_status, "inline": True},
-
-            {
-                "name": "⚡ Quick Actions & Links",
-                "value": (
-                    f"🔗 [**Open Job Posting**]({apply_url})\n"
-                    f"✅ [**Approve Application**](http://localhost:5678/webhook/approve?job_id={job_id})\n"
-                    f"❌ [**Reject Application**](http://localhost:5678/webhook/reject?job_id={job_id})"
-                ),
-                "inline": False
-            }
-        ],
+        "fields": fields,
         "footer": {
             "text": f"Job ID: {job_id} • Stage 5 Human-in-the-Loop Gate",
             "icon_url": "https://cdn-icons-png.flaticon.com/512/3855/3855328.png"
