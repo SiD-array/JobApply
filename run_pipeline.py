@@ -61,10 +61,32 @@ def main():
     print("🚀 STARTING AUTOMATED JOB APPLICATION PIPELINE")
     print("="*60)
 
+    # 0. Sync and select GitHub projects dynamically
+    print("\n--- SYNCHRONIZING GITHUB PROJECTS & LIBRARY ---")
+    from src.github_projects import GitHubProjectsManager
+    proj_manager = GitHubProjectsManager(provider=args.provider)
+    proj_manager.update_projects_library()
+
+    # Load job content for project selector
+    with open(job_file_path, "r", encoding="utf-8") as f:
+        job_data = json.load(f)
+
+    # Select best 3 projects matching this job
+    selected_projects = proj_manager.select_best_projects(job_data, limit=3)
+
+    # Load master profile and merge selected projects
+    with open("source_profile.json", "r", encoding="utf-8") as f:
+        profile_data = json.load(f)
+
+    profile_data["projects"] = selected_projects
+    temp_profile_path = "temp_profile_with_projects.json"
+    with open(temp_profile_path, "w", encoding="utf-8") as f:
+        json.dump(profile_data, f, indent=2)
+
     # 1. Stage 2: Fit Evaluation Gate
     print("\n--- STAGE 2: EVALUATION GATE ---")
     eval_script = os.path.join("src", "evaluator.py")
-    eval_out = run_command([eval_script, "--profile", "source_profile.json", "--job", job_file_path, "--provider", args.provider])
+    eval_out = run_command([eval_script, "--profile", temp_profile_path, "--job", job_file_path, "--provider", args.provider])
     eval_json = json.loads(eval_out)
     score = eval_json.get("score", 0.0)
     passed = eval_json.get("passed", False)
@@ -73,13 +95,16 @@ def main():
     if not passed and not args.force_apply:
         print(f"❌ Match score {score}% is below threshold of 70%. Halting pipeline to save time & credits.")
         print("Tip: Use --force-apply flag to proceed anyway.")
+        # Cleanup temp profile before exiting
+        if os.path.exists(temp_profile_path):
+            os.remove(temp_profile_path)
         sys.exit(0)
 
     # 2. Stage 3: LLM Resume Tailoring
     print("\n--- STAGE 3: LLM RESUME TAILORING ---")
     tailored_json_path = os.path.join("output_resumes", "tailored_profile.json")
     tailor_script = os.path.join("src", "tailor_llm.py")
-    run_command([tailor_script, "--provider", args.provider, "--job", job_file_path, "--output", tailored_json_path])
+    run_command([tailor_script, "--provider", args.provider, "--profile", temp_profile_path, "--job", job_file_path, "--output", tailored_json_path])
 
     # 3. Stage 4: PDF Compilation
     print("\n--- STAGE 4: ATS PDF RESUME COMPILATION ---")
@@ -100,7 +125,11 @@ def main():
     print("\n--- STAGE 5: PLAYWRIGHT ATS FORM AUTO-FILL ---")
     print("Launching Chromium browser to fill application inputs...")
     apply_script = os.path.join("src", "apply_playwright.py")
-    run_command([apply_script, "--url", args.url, "--profile", "source_profile.json", "--pdf", output_pdf_path])
+    run_command([apply_script, "--url", args.url, "--profile", temp_profile_path, "--pdf", output_pdf_path])
+
+    # Cleanup temp profile
+    if os.path.exists(temp_profile_path):
+        os.remove(temp_profile_path)
 
     print("\n✅ PIPELINE EXECUTION COMPLETE!")
 

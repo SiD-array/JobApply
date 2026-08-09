@@ -52,8 +52,11 @@ def main():
     # If target-passed is specified, we evaluate discovered jobs locally to filter out poor matches
     profile_data = {}
     if args.target_passed > 0:
+        import copy
         from src.evaluator import AIEvaluator
+        from src.github_projects import GitHubProjectsManager
         evaluator = AIEvaluator(provider="groq")
+        proj_manager = GitHubProjectsManager(provider="groq")
         with open(args.profile, "r", encoding="utf-8") as f:
             profile_data = json.load(f)
 
@@ -77,7 +80,12 @@ def main():
             for j in discovered:
                 # Convert Job object to dict
                 j_dict = j.to_dict()
-                res = evaluator.evaluate_job(profile_data, j_dict, threshold=70.0)
+                
+                # Dynamically align projects for this specific job description
+                temp_profile = copy.deepcopy(profile_data)
+                temp_profile["projects"] = proj_manager.select_best_projects(j_dict, limit=3)
+                
+                res = evaluator.evaluate_job(temp_profile, j_dict, threshold=70.0)
                 if res.get("passed"):
                     j.score = res.get("score")
                     j.passed = res.get("passed")

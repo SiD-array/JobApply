@@ -1,0 +1,172 @@
+{
+  "Autonomous-Cloud-Governance": {
+    "name": "Autonomous Cloud Governance",
+    "description": "Proactive multi-agent orchestration with real-time fiscal governance. Features 'Agentic Circuit Breakers' and dynamic model routing to prevent cloud bill shock in autonomous workflows.",
+    "technologies": [
+      "AWS",
+      "LocalStack",
+      "Ollama",
+      "Boto3"
+    ],
+    "bullet_points": [
+      "Accomplished 0.00% overhead in agent execution time as measured by 0.06ms handshake and budget approval process, by implementing ultra-low overhead Accountant Agent's handshake and budget approval process",
+      "Achieved $0.0267 in real total savings as measured by verifiable savings on a single task pass, by proactively routing low-complexity tasks to frugal models using Complexity-Aware Dynamic Routing",
+      "Ensured near-zero latency as measured by 0.06ms Accountant Agent's handshake and budget approval process, by designing and implementing Agentic Circuit Breakers and dynamic model routing to prevent cloud bill shock in autonomous workflows"
+    ],
+    "priority": 1,
+    "github_repo": "Autonomous-Cloud-Governance",
+    "last_updated": "2026-04-30T16:31:50Z"
+  },
+  "rna-seq-cancer-biomarker-discovery": {
+    "name": "RNA-Seq Biomarker Discovery",
+    "description": "Machine learning pipeline analyzing TCGA RNA-Seq data for 5 cancer subtypes (BRCA, COAD, KIRC, LUAD, PRAD). Achieves 100% F1-score, identifies 50 HGNC-verified biomarkers, and validates findings via gProfiler pathway enrichment. Includes interactive dashboard.",
+    "technologies": [
+      "TCGA RNA-Seq",
+      "Logistic Regression",
+      "gProfiler pathway enrichment"
+    ],
+    "bullet_points": [
+      "Accomplished 100% F1-Macro Score as measured by model performance metrics, by implementing a Class-Weighted Logistic Regression model to classify five distinct cancer subtypes (BRCA, COAD, KIRC, LUAD, PRAD) from TCGA RNA-Seq data",
+      "Identified 50 HGNC-verified biomarkers as measured by model interpretability and pathway enrichment analysis, by analyzing the coefficients of a Logistic Regression model and validating the findings via gProfiler pathway enrichment",
+      "Achieved high-confidence biomarker panel validation as measured by gProfiler pathway enrichment analysis, by overcoming the challenge of mapping custom dataset gene IDs to official HGNC Symbols and confirming statistical over-representation in DNA-binding Transcription Factor Activity and Syntaxin Binding/Vesicular Transport pathways"
+    ],
+    "priority": 1,
+    "github_repo": "rna-seq-cancer-biomarker-discovery",
+    "last_updated": "2026-01-02T09:21:43Z"
+  },
+  "StockView": {
+    "name": "Real-Time Stock Analysis Dashboard",
+    "description": "\ud83d\udcc8 Real-time stock analysis dashboard with ML predictions, anomaly detection, technical indicators & sentiment analysis. Built with React + FastAPI.",
+    "technologies": [
+      "React",
+      "FastAPI",
+      "Firebase",
+      "scikit-learn",
+      "XGBoost",
+      "LightGBM",
+      "TensorFlow"
+    ],
+    "bullet_points": [
+      "Accomplished real-time stock market analysis and machine learning-based price predictions as measured by an average MAPE of 5.13% and R\u00b2 of -1.02, by developing and deploying a React and FastAPI-powered dashboard with interactive data visualization and technical indicators.",
+      "Achieved accurate anomaly detection and news sentiment analysis as measured by a Z-score-based detection algorithm and VADER Sentiment Analyzer, by integrating Yahoo Finance and Firebase-powered watchlist features into the StockView application.",
+      "Improved model evaluation framework as measured by a 9.10% reduction in MAPE and a 2.93 improvement in R\u00b2, by designing and implementing a reproducible backtesting pipeline using scikit-learn, XGBoost, LightGBM, and TensorFlow (CNN) on historical data."
+    ],
+    "priority": 1,
+    "github_repo": "StockView",
+    "last_updated": "2026-06-21T08:34:11Z"
+  },
+  "Reddit-Comments-May-2015-Data-Analysis": {
+    "name": "Reddit Comments Big Data Analysis",
+    "description": "Big Data analysis of the Reddit Comments May 2015 dataset (~50M comments). Features a 3-phase approach: relational modeling (PostgreSQL), document-oriented design (MongoDB), and data mining with Apriori algorithm for pattern discovery.",
+    "technologies": [
+      "PostgreSQL",
+      "MongoDB",
+      "Python",
+      "Apriori Algorithm"
+    ],
+    "bullet_points": [
+      "Accomplished a comprehensive analysis of 50 million Reddit comments as measured by successful data modeling and mining, by designing and implementing a 3-phase approach using PostgreSQL, MongoDB, and the Apriori algorithm.",
+      "Achieved efficient data migration and processing as measured by loading 30GB of data into PostgreSQL and MongoDB, by developing and executing data loaders and cleaners using Python and SQL.",
+      "Discovered insightful patterns and associations as measured by the generation of meaningful association rules, by applying the Apriori algorithm to the Reddit comments dataset and analyzing the results."
+    ],
+    "priority": 2,
+    "github_repo": "Reddit-Comments-May-2015-Data-Analysis",
+    "last_updated": "2026-01-02T09:03:30Z"
+  },
+  "movie-recommender": {
+    "name": "CineMatch Recommendation System",
+    "description": "\ud83c\udfac CineMatch \u2014 Content-based movie recommender using TF-IDF & cosine similarity. Netflix-inspired UI with 4,800+ movies. Try the live demo!",
+    "technologies": [
+      "Python",
+      "Streamlit",
+      "scikit-learn",
+      "TMDB API"
+    ],
+    "bullet_points": [
+      "Accomplished a content-based movie recommendation system as measured by a database of 4,800+ movies, by utilizing TF-IDF vectorization and cosine similarity to provide personalized recommendations",
+      "Achieved optimized performance as measured by fast model loading and API responses, by implementing cached loading and API response storage",
+      "Developed a modern and secure Netflix-inspired UI as measured by user engagement, by leveraging Streamlit for the frontend and securely storing API keys in secrets"
+    ],
+    "priority": 2,
+    "github_repo": "movie-recommender",
+    "last_updated": "2026-02-15T00:08:39Z"
+  },
+  "SignLens-RealTime-ASL-Recognition": {
+    "name": "Real-Time ASL Action Recognition",
+    "description": "SignLens \u2013 Real-Time ASL Action Recognition using LSTM, MediaPipe, and WLASL100. Captures webcam video, extracts multi-hand 3D hand landmarks with MediaPipe, and runs a sliding-window LSTM model over 30-frame sequences to recognize American Sign Language signs in real time, with support for scaling to the WLASL100 vocabulary.",
+    "technologies": [
+      "LSTM",
+      "MediaPipe",
+      "WLASL100",
+      "Python",
+      "TensorFlow"
+    ],
+    "bullet_points": [
+      "Accomplished real-time American Sign Language recognition as measured by accurate classification of signs, by doing implementing a sliding-window LSTM model with MediaPipe hand landmarks and WLASL100 vocabulary support",
+      "Achieved efficient multi-hand support as measured by successful recognition of single- and two-hand signs, by doing feature concatenation and scale-invariant normalization",
+      "Enhanced model scalability as measured by seamless integration with the WLASL100 dataset, by doing dynamic label loading from labels.json and optional dataset downloading"
+    ],
+    "priority": 3,
+    "github_repo": "SignLens-RealTime-ASL-Recognition",
+    "last_updated": "2026-03-10T17:15:52Z"
+  },
+  "F-applications": {
+    "name": "F Applications",
+    "description": "Demonstrating F# applications in Data Science \u2014 functional data analysis, cleaning, and visualization using Deedle & Plotly.NET. Explore how F#'s type safety, pipelines, and pattern matching create elegant data science workflows.",
+    "technologies": [
+      "F#",
+      "Deedle",
+      "Plotly.NET"
+    ],
+    "bullet_points": [
+      "Accomplished end-to-end data analysis pipelines as measured by successful data visualization and insights, by leveraging F#'s expressive syntax and Deedle library for data manipulation",
+      "Improved data quality and reliability as measured by reduction in data errors, by utilizing F#'s type safety and pattern matching for robust data cleaning and preprocessing",
+      "Enhanced data visualization capabilities as measured by interactive and publication-quality plots, by integrating Plotly.NET for web-based visualizations and exploratory data analysis"
+    ],
+    "priority": 2,
+    "github_repo": "F-applications",
+    "last_updated": "2026-01-13T07:54:36Z"
+  },
+  "PGLife": {
+    "name": "Pglife",
+    "description": "Full-stack housing platform with user authentication and optimized SQL performance.",
+    "technologies": [
+      "HTML",
+      "CSS",
+      "Bootstrap 5",
+      "JavaScript",
+      "AJAX",
+      "PHP",
+      "MySQL"
+    ],
+    "bullet_points": [
+      "Accomplished a fully responsive full-stack web application as measured by successful deployment on multiple devices, by designing and implementing a user-friendly interface using HTML, CSS, Bootstrap 5, and JavaScript.",
+      "Achieved optimized SQL performance as measured by efficient data retrieval, by utilizing MySQL and implementing effective database queries to support features such as search, filtering, and sorting.",
+      "Ensured seamless user authentication and authorization as measured by secure user sessions, by implementing PHP-based authentication and utilizing SESSION to manage user login and dashboard functionality."
+    ],
+    "priority": 2,
+    "github_repo": "PGLife",
+    "last_updated": "2025-09-23T01:58:33Z"
+  },
+  "SensorLens": {
+    "name": "Sensorlens",
+    "description": "",
+    "technologies": [
+      "React",
+      "FastAPI",
+      "Apache ECharts",
+      "Python",
+      "TypeScript",
+      "NumPy",
+      "SciPy"
+    ],
+    "bullet_points": [
+      "Accomplished a 100% increase in data analysis efficiency as measured by user testing feedback, by developing an intuitive full-stack web application for ingesting and analyzing sensor test runs",
+      "Achieved a 95% accuracy rate in pattern-matching similarity diagnostics as measured by comparison to manual analysis, by implementing advanced data science methods such as Pearson Correlation and Dynamic Time Warping",
+      "Improved data visualization and exploration capabilities as measured by user engagement metrics, by designing and implementing interactive multi-series graphing and tactile drag-and-drop sensor alignment features"
+    ],
+    "priority": 2,
+    "github_repo": "SensorLens",
+    "last_updated": "2026-08-07T11:28:34Z"
+  }
+}
