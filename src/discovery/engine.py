@@ -18,7 +18,7 @@ from src.discovery.models import Job, SearchQuery
 from src.discovery.base_provider import BaseJobProvider
 from src.discovery.providers import (
     LinkedInProvider,
-    WellFoundProvider,
+    SimplifyProvider,
     GreenhouseProvider,
     LeverProvider,
     AshbyProvider,
@@ -33,7 +33,7 @@ class DiscoveryEngine:
         self.providers: Dict[str, BaseJobProvider] = {}
         # Register default 6 providers
         self.register_provider(LinkedInProvider())
-        self.register_provider(WellFoundProvider())
+        self.register_provider(SimplifyProvider())
         self.register_provider(GreenhouseProvider())
         self.register_provider(LeverProvider())
         self.register_provider(AshbyProvider())
