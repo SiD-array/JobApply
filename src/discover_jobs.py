@@ -109,16 +109,7 @@ def main():
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(jobs_dict, f, indent=2)
 
-    # Save timestamped debug run file
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    debug_dir = os.path.join(os.path.dirname(os.path.abspath(args.output)), "debug_runs")
-    os.makedirs(debug_dir, exist_ok=True)
-    debug_path = os.path.join(debug_dir, f"discovered_jobs_{timestamp}.json")
-    with open(debug_path, "w", encoding="utf-8") as f:
-        json.dump(jobs_dict, f, indent=2)
-
     print(f"\n[SAVED] Saved {len(jobs)} normalized jobs to: {args.output}")
-    print(f"[DEBUG SAVED] Timestamped run saved to: {debug_path}")
 
     # Optionally post to n8n
     if args.webhook and args.webhook.lower() not in ["none", "null", "disabled", "false"]:
