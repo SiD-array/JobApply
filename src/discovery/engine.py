@@ -90,7 +90,10 @@ class DiscoveryEngine:
         Attempts to use the specified age filter. If 0 jobs pass, relaxes the age filter.
         """
         if not jobs:
+            print("    [DEBUG] Provider returned 0 raw jobs. Skipping age filter relaxation.")
             return []
+
+        print(f"    [DEBUG] Filtering {len(jobs)} raw jobs fetched...")
 
         # Progressive age threshold relaxations: target limit -> 2x -> 4x -> None (no limit)
         thresholds = [max_age_hours] if max_age_hours else [None]
@@ -116,6 +119,9 @@ class DiscoveryEngine:
                 key = f"{job.title.lower()}_{job.company.lower()}"
                 if job.url not in seen_urls and key not in seen_keys:
                     passed.append(job)
+
+            limit_str = f"{limit} hours" if limit else "no limit"
+            print(f"    [DEBUG] Trying limit: {limit_str} ➔ {len(passed)} jobs passed.")
 
             if passed or not limit:
                 # Add to deduplication sets and return
