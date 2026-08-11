@@ -119,6 +119,7 @@
       const [searchQuery, setSearchQuery] = useState("");
       const [statusFilter, setStatusFilter] = useState("All");
       const [isDiscoveryModalOpen, setIsDiscoveryModalOpen] = useState(false);
+      const [selectedJob, setSelectedJob] = useState(null);
       const [discoveryStatus, setDiscoveryStatus] = useState({ status: "idle", message: "Ready to discover jobs", last_run: null });
 
       // Fetch discovery status
