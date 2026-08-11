@@ -120,9 +120,36 @@
       const [statusFilter, setStatusFilter] = useState("All");
       const [selectedJob, setSelectedJob] = useState(null);
 
+      const [discoveryStatus, setDiscoveryStatus] = useState({ status: "idle", message: "Ready to discover jobs", last_run: null });
+
+      // Fetch discovery status
+      const fetchDiscoveryStatus = async () => {
+        try {
+          const res = await fetch("/api/discovery-status");
+          if (res.ok) {
+            const data = await res.json();
+            setDiscoveryStatus(data);
+          }
+        } catch (e) {}
+      };
+
+      const handleRunDiscovery = async () => {
+        setDiscoveryStatus({ status: "running", message: "Launching job discovery engine across 6 job boards...", last_run: new Date().toLocaleTimeString() });
+        try {
+          await fetch("/api/trigger-discovery", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ limit: 3, providers: "linkedin,simplify,greenhouse,lever,ashby,workday" })
+          });
+        } catch (e) {
+          setDiscoveryStatus({ status: "error", message: "Failed to connect to discovery server." });
+        }
+      };
+
       // Fetch live data from serve API
       const fetchLiveData = async () => {
         try {
+          fetchDiscoveryStatus();
           // Fetch persistent applications store
           const [appsRes, insightsRes] = await Promise.all([
             fetch("/api/applications").catch(() => null),
@@ -273,6 +300,8 @@
                     setViewMode={setViewMode}
                     handleStatusChange={handleStatusChange}
                     handleDeleteJob={handleDeleteJob}
+                    discoveryStatus={discoveryStatus}
+                    handleRunDiscovery={handleRunDiscovery}
                     setSelectedJob={setSelectedJob}
                   />
                 )}
@@ -305,6 +334,8 @@
       setViewMode, 
       handleStatusChange,
       handleDeleteJob,
+      discoveryStatus,
+      handleRunDiscovery,
       setSelectedJob 
     }) {
       const statuses = ["All", "Approved", "Applied", "Not Applied", "Interviewing", "Offer", "Rejected"];
@@ -329,22 +360,64 @@
               </p>
             </div>
 
-            {/* View Switcher (Table Datasheet vs Kanban Board) */}
-            <div class="flex items-center bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl">
+            {/* Action Bar: 1-Click Run Discovery + View Switcher */}
+            <div class="flex flex-wrap items-center gap-3">
+              {/* 1-Click Run Discovery Action Button */}
               <button
-                onClick={() => setViewMode("table")}
-                class={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-xs transition tactile-btn ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                onClick={handleRunDiscovery}
+                disabled={discoveryStatus.status === 'running'}
+                class={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition shadow-lg tactile-btn ${
+                  discoveryStatus.status === 'running'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse cursor-wait'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/25 border border-emerald-400/30'
+                }`}
               >
-                <span>📋</span> Datasheet Table
+                {discoveryStatus.status === 'running' ? (
+                  <>
+                    <span class="animate-spin font-bold text-sm">⚡</span>
+                    <span>Discovering Jobs...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🚀</span>
+                    <span>Discover Jobs Now</span>
+                  </>
+                )}
               </button>
-              <button
-                onClick={() => setViewMode("kanban")}
-                class={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-xs transition tactile-btn ${viewMode === 'kanban' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-              >
-                <span>📌</span> Kanban Board
-              </button>
+
+              {/* View Switcher (Table Datasheet vs Kanban Board) */}
+              <div class="flex items-center bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl">
+                <button
+                  onClick={() => setViewMode("table")}
+                  class={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-xs transition tactile-btn ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                >
+                  <span>📋</span> Datasheet Table
+                </button>
+                <button
+                  onClick={() => setViewMode("kanban")}
+                  class={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-xs transition tactile-btn ${viewMode === 'kanban' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                >
+                  <span>📌</span> Kanban Board
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Live Discovery Status Notification Banner */}
+          {discoveryStatus.message && discoveryStatus.status !== 'idle' && (
+            <div class={`px-4 py-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
+              discoveryStatus.status === 'running' ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 animate-pulse' :
+              discoveryStatus.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' :
+              discoveryStatus.status === 'error' ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' :
+              'bg-slate-900/60 text-slate-400 border-slate-800'
+            }`}>
+              <div class="flex items-center gap-2">
+                <span>{discoveryStatus.status === 'running' ? '⚡' : discoveryStatus.status === 'completed' ? '✅' : 'ℹ️'}</span>
+                <span>{discoveryStatus.message}</span>
+              </div>
+              {discoveryStatus.last_run && <span class="text-slate-500 font-mono text-[10px]">Last run: {discoveryStatus.last_run}</span>}
+            </div>
+          )}
 
           {/* Quick Metrics Bar */}
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">

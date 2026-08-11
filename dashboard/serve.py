@@ -12,9 +12,51 @@ import webbrowser
 import os
 import sys
 
+import subprocess
+import threading
+import json
+import time
+
 PORT = 3000
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(DIRECTORY)
+
+DISCOVERY_STATUS = {
+    "status": "idle",
+    "message": "Ready to discover jobs",
+    "last_run": None
+}
+
+
+def run_discovery_task(limit=3, providers="linkedin,simplify,greenhouse,lever,ashby,workday"):
+    global DISCOVERY_STATUS
+    DISCOVERY_STATUS["status"] = "running"
+    DISCOVERY_STATUS["message"] = f"Searching {providers} for entry-level roles..."
+    DISCOVERY_STATUS["last_run"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        venv_python = os.path.join(PROJECT_ROOT, "venv", "Scripts", "python.exe")
+        if not os.path.exists(venv_python):
+            venv_python = sys.executable
+
+        cmd = [
+            venv_python,
+            os.path.join(PROJECT_ROOT, "src", "discover_jobs.py"),
+            "--webhook", "http://localhost:5678/webhook/job-ingest",
+            "--providers", providers,
+            "--limit", str(limit)
+        ]
+
+        proc = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
+        if proc.returncode == 0:
+            DISCOVERY_STATUS["status"] = "completed"
+            DISCOVERY_STATUS["message"] = "Discovery complete! Jobs sent to n8n & Discord."
+        else:
+            DISCOVERY_STATUS["status"] = "error"
+            DISCOVERY_STATUS["message"] = f"Discovery error: {proc.stderr[:120]}"
+    except Exception as e:
+        DISCOVERY_STATUS["status"] = "error"
+        DISCOVERY_STATUS["message"] = str(e)
 
 
 class DashboardHandler(http.server.SimpleHTTPRequestHandler):
@@ -63,6 +105,14 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
             else:
                 self.wfile.write(b"[]")
 
+        # 4. API: Job Discovery Status
+        elif self.path == "/api/discovery-status":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps(DISCOVERY_STATUS).encode("utf-8"))
+
         # Static Files
         else:
             super().do_GET()
@@ -77,6 +127,38 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         import urllib.parse
         clean_path = urllib.parse.urlparse(self.path).path.rstrip("/")
+
+        # 1-Click Discovery Trigger API
+        if clean_path in ["/api/trigger-discovery", "/api/discovery/start"]:
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_data = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
+            try:
+                payload = json.loads(post_data) if post_data.strip() else {}
+                limit = int(payload.get("limit", 3))
+                providers = payload.get("providers", "linkedin,simplify,greenhouse,lever,ashby,workday")
+
+                if DISCOVERY_STATUS.get("status") == "running":
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "already_running", "message": "Discovery task is already in progress!"}).encode("utf-8"))
+                    return
+
+                thread = threading.Thread(target=run_discovery_task, kwargs={"limit": limit, "providers": providers}, daemon=True)
+                thread.start()
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "started", "message": f"Discovery task started in background across {providers}!"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode("utf-8"))
+            return
+
         if clean_path in ["/api/delete-application", "/api/applications/delete"]:
             content_length = int(self.headers.get("Content-Length", 0))
             post_data = self.rfile.read(content_length).decode("utf-8")
