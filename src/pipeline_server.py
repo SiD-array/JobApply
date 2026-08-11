@@ -37,6 +37,13 @@ def save_applications(apps):
         json.dump(apps, f, indent=2)
 
 
+def delete_application(job_id):
+    apps = load_applications()
+    updated = [item for item in apps if str(item.get("job_id")) != str(job_id)]
+    save_applications(updated)
+    return updated
+
+
 def update_or_add_application(job_info, tailored_data=None, pdf_path=None, status="Approved"):
     apps = load_applications()
 
@@ -226,6 +233,25 @@ class PipelineHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+
+        # API: Delete Application from Datasheet
+        if parsed.path in ["/api/delete-application", "/api/applications/delete"]:
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_data = self.rfile.read(content_length).decode("utf-8")
+            try:
+                payload = json.loads(post_data)
+                job_id = str(payload.get("job_id", ""))
+                delete_application(job_id)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self._send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "deleted_job_id": job_id}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode("utf-8"))
+            return
 
         # API: Update Status from Dashboard via POST
         if parsed.path in ["/api/update-status", "/api/applications/update-status"]:

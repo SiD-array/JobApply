@@ -68,6 +68,33 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self):
+        if self.path in ["/api/delete-application", "/api/applications/delete"]:
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_data = self.rfile.read(content_length).decode("utf-8")
+            try:
+                import json
+                payload = json.loads(post_data)
+                job_id = str(payload.get("job_id", ""))
+
+                apps_file = os.path.join(PROJECT_ROOT, "output_resumes", "applications.json")
+                if os.path.exists(apps_file):
+                    with open(apps_file, "r", encoding="utf-8") as f:
+                        apps = json.load(f)
+                    apps = [item for item in apps if str(item.get("job_id")) != job_id]
+                    with open(apps_file, "w", encoding="utf-8") as f:
+                        json.dump(apps, f, indent=2)
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "deleted_job_id": job_id}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode("utf-8"))
+            return
+
         if self.path in ["/api/update-status", "/api/applications/update-status"]:
             content_length = int(self.headers.get("Content-Length", 0))
             post_data = self.rfile.read(content_length).decode("utf-8")

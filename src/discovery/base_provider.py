@@ -17,11 +17,27 @@ class BaseJobProvider(ABC):
         """
         pass
 
+    EXCLUDED_SENIORITY_KEYWORDS = ["senior", "sr.", "sr ", "staff", "principal", "lead", "director", "head of", "vp", "manager", "architect"]
+
+    def is_senior_role(self, title: str) -> bool:
+        """Check if job title requires senior/staff/lead experience not suitable for early career/new grad."""
+        t_lower = title.lower()
+        for kw in self.EXCLUDED_SENIORITY_KEYWORDS:
+            if kw in t_lower:
+                # Exception: allow if explicitly flagged for Junior / New Grad / Intern
+                if any(x in t_lower for x in ["junior", "new grad", "intern", "university"]):
+                    return False
+                return True
+        return False
+
     def matches_keyword(self, title: str, keywords: List[str]) -> bool:
         """
         Check if the job title matches any of the target search keywords.
-        Implements flexible matching for complex terms (e.g. New Grad).
+        Enforces strict seniority exclusions for early career candidates.
         """
+        if self.is_senior_role(title):
+            return False
+
         if not keywords:
             return True
             

@@ -191,6 +191,21 @@
         }
       };
 
+      const handleDeleteJob = async (jobId) => {
+        if (!confirm("Are you sure you want to delete this job entry from your datasheet?")) return;
+        setApplications(prev => prev.filter(app => (app.job_id !== jobId && app.id !== jobId)));
+
+        try {
+          await fetch("/api/delete-application", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ job_id: jobId })
+          });
+        } catch (e) {
+          console.error("Delete job error", e);
+        }
+      };
+
       const filteredApps = applications.filter(app => {
         const matchesSearch = searchQuery === "" || 
           (app.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -282,6 +297,7 @@
                     viewMode={viewMode}
                     setViewMode={setViewMode}
                     handleStatusChange={handleStatusChange}
+                    handleDeleteJob={handleDeleteJob}
                     setSelectedJob={setSelectedJob}
                   />
                 )}
@@ -293,7 +309,7 @@
 
             {/* Slide-over Detail Drawer */}
             {selectedJob && (
-              <DetailModal job={selectedJob} onClose={() => setSelectedJob(null)} handleStatusChange={handleStatusChange} />
+              <DetailModal job={selectedJob} onClose={() => setSelectedJob(null)} handleStatusChange={handleStatusChange} handleDeleteJob={handleDeleteJob} />
             )}
           </main>
         </div>
@@ -313,6 +329,7 @@
       viewMode, 
       setViewMode, 
       handleStatusChange,
+      handleDeleteJob,
       setSelectedJob 
     }) {
       const statuses = ["All", "Approved", "Applied", "Not Applied", "Interviewing", "Offer", "Rejected"];
@@ -417,12 +434,13 @@
                       <th class="py-4 px-4">Application Links</th>
                       <th class="py-4 px-4">Tailored Resume</th>
                       <th class="py-4 px-6 text-center">Status Action Bar (No Dropdowns)</th>
+                      <th class="py-4 px-4 text-center">Manage</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-800/60 text-sm">
                     {applications.length === 0 ? (
                       <tr>
-                        <td colSpan="6" class="text-center py-12 text-slate-500 font-medium">
+                        <td colSpan="7" class="text-center py-12 text-slate-500 font-medium">
                           No job records found matching your filters.
                         </td>
                       </tr>
@@ -495,6 +513,17 @@
                               currentStatus={app.status || "Approved"} 
                               onSelect={(newSt) => handleStatusChange(app.job_id || app.id, newSt)} 
                             />
+                          </td>
+
+                          {/* Delete Action */}
+                          <td class="py-4 px-4 text-center">
+                            <button
+                              onClick={() => handleDeleteJob(app.job_id || app.id)}
+                              title="Delete entry from datasheet"
+                              class="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-600 hover:text-white border border-rose-500/20 rounded-xl font-bold text-xs transition tactile-btn"
+                            >
+                              🗑️
+                            </button>
                           </td>
                         </tr>
                       ))
