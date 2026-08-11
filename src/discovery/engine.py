@@ -204,6 +204,36 @@ class DiscoveryEngine:
         except Exception:
             pass
 
+    def _fetch_provider_until_target(self, provider: BaseJobProvider, query: SearchQuery, seen_urls: set, seen_keys: set) -> List[Job]:
+        """
+        Continuously fetch deeper from a provider if previously seen jobs were skipped,
+        guaranteeing that the provider returns up to query.limit_per_provider fresh, unseen jobs.
+        """
+        import copy
+        target_count = query.limit_per_provider
+        accumulated_unseen: List[Job] = []
+
+        current_query = copy.deepcopy(query)
+        multiplier = 1
+
+        while len(accumulated_unseen) < target_count and multiplier <= 4:
+            current_query.limit_per_provider = target_count * multiplier
+            raw_jobs = provider.fetch_jobs(current_query)
+
+            if not raw_jobs:
+                break
+
+            filtered = self._filter_and_deduplicate(raw_jobs, current_query.max_age_hours, seen_urls, seen_keys)
+            accumulated_unseen = filtered
+
+            if len(accumulated_unseen) >= target_count:
+                break
+
+            print(f"    [DEEP FETCH] {provider.name}: Found {len(accumulated_unseen)}/{target_count} unseen jobs. Fetching deeper pool (limit={target_count * (multiplier + 1)})...")
+            multiplier += 1
+
+        return accumulated_unseen[:target_count]
+
     def discover_jobs(self, query: SearchQuery, active_providers: List[str] = None) -> List[Job]:
         """
         Run discovery across registered providers concurrently.
@@ -227,17 +257,16 @@ class DiscoveryEngine:
 
         with ThreadPoolExecutor(max_workers=len(target_providers)) as executor:
             future_to_provider = {
-                executor.submit(provider.fetch_jobs, query): provider
+                executor.submit(self._fetch_provider_until_target, provider, query, seen_urls, seen_keys): provider
                 for provider in target_providers
             }
 
             for future in as_completed(future_to_provider):
                 provider = future_to_provider[future]
                 try:
-                    jobs = future.result()
-                    filtered_jobs = self._filter_and_deduplicate(jobs, query.max_age_hours, seen_urls, seen_keys)
+                    filtered_jobs = future.result()
                     all_jobs.extend(filtered_jobs)
-                    print(f"  + {provider.name}: Found {len(filtered_jobs)} new unique unseen jobs")
+                    print(f"  + {provider.name}: Delivered {len(filtered_jobs)} fresh, unseen unique jobs")
                 except Exception as e:
                     print(f"  x {provider.name} failed: {e}", file=sys.stderr)
 
