@@ -118,8 +118,7 @@
       const [loading, setLoading] = useState(false);
       const [searchQuery, setSearchQuery] = useState("");
       const [statusFilter, setStatusFilter] = useState("All");
-      const [selectedJob, setSelectedJob] = useState(null);
-
+      const [isDiscoveryModalOpen, setIsDiscoveryModalOpen] = useState(false);
       const [discoveryStatus, setDiscoveryStatus] = useState({ status: "idle", message: "Ready to discover jobs", last_run: null });
 
       // Fetch discovery status
@@ -133,13 +132,21 @@
         } catch (e) {}
       };
 
-      const handleRunDiscovery = async () => {
-        setDiscoveryStatus({ status: "running", message: "Launching job discovery engine across 6 job boards...", last_run: new Date().toLocaleTimeString() });
+      const handleRunDiscovery = async (config) => {
+        const providersStr = (config && config.providers) ? config.providers : "linkedin,simplify,greenhouse,lever,ashby,workday";
+        const limitNum = (config && config.limit) ? config.limit : 3;
+
+        setDiscoveryStatus({ 
+          status: "running", 
+          message: `Launching discovery engine across ${providersStr.split(',').length} job boards...`, 
+          last_run: new Date().toLocaleTimeString() 
+        });
+
         try {
           await fetch("/api/trigger-discovery", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ limit: 3, providers: "linkedin,simplify,greenhouse,lever,ashby,workday" })
+            body: JSON.stringify({ limit: limitNum, providers: providersStr })
           });
         } catch (e) {
           setDiscoveryStatus({ status: "error", message: "Failed to connect to discovery server." });
@@ -301,7 +308,7 @@
                     handleStatusChange={handleStatusChange}
                     handleDeleteJob={handleDeleteJob}
                     discoveryStatus={discoveryStatus}
-                    handleRunDiscovery={handleRunDiscovery}
+                    onOpenDiscoveryModal={() => setIsDiscoveryModalOpen(true)}
                     setSelectedJob={setSelectedJob}
                   />
                 )}
@@ -310,6 +317,14 @@
                 {activeTab === 'resumes' && <ResumesTab applications={applications} />}
               </>
             )}
+
+            {/* Interactive Job Discovery Provider Picker Modal */}
+            <DiscoveryModal 
+              isOpen={isDiscoveryModalOpen} 
+              onClose={() => setIsDiscoveryModalOpen(false)} 
+              onStartDiscovery={handleRunDiscovery} 
+              discoveryStatus={discoveryStatus} 
+            />
 
             {/* Slide-over Detail Drawer */}
             {selectedJob && (
@@ -335,7 +350,7 @@
       handleStatusChange,
       handleDeleteJob,
       discoveryStatus,
-      handleRunDiscovery,
+      onOpenDiscoveryModal,
       setSelectedJob 
     }) {
       const statuses = ["All", "Approved", "Applied", "Not Applied", "Interviewing", "Offer", "Rejected"];
@@ -364,7 +379,7 @@
             <div class="flex flex-wrap items-center gap-3">
               {/* 1-Click Run Discovery Action Button */}
               <button
-                onClick={handleRunDiscovery}
+                onClick={onOpenDiscoveryModal}
                 disabled={discoveryStatus.status === 'running'}
                 class={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition shadow-lg tactile-btn ${
                   discoveryStatus.status === 'running'
@@ -820,6 +835,145 @@
             <a href="/output_resumes/Siddharth_Bhople_Resume.pdf" target="_blank" class="px-5 py-2.5 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-500 transition tactile-btn">
               Download PDF Resume
             </a>
+          </div>
+        </div>
+      );
+    }
+
+    /* =========================================================================
+       DISCOVERY MODAL — Interactive Job Provider Picker & Batch Configurator
+       ========================================================================= */
+    function DiscoveryModal({ isOpen, onClose, onStartDiscovery, discoveryStatus }) {
+      if (!isOpen) return null;
+
+      const ALL_PROVIDERS = [
+        { id: "linkedin", name: "LinkedIn Jobs", icon: "💼", badge: "Live API" },
+        { id: "simplify", name: "Simplify Jobs", icon: "⚡", badge: "New Grad" },
+        { id: "greenhouse", name: "Greenhouse Boards", icon: "🌱", badge: "Direct API" },
+        { id: "lever", name: "Lever Board", icon: "⚙️", badge: "Direct API" },
+        { id: "ashby", name: "Ashby HQ", icon: "🏢", badge: "Direct API" },
+        { id: "workday", name: "Workday Portal", icon: "🏛️", badge: "Enterprise" }
+      ];
+
+      const [selectedProviders, setSelectedProviders] = useState(["linkedin", "simplify", "greenhouse", "lever", "ashby", "workday"]);
+      const [limit, setLimit] = useState(3);
+
+      const toggleProvider = (id) => {
+        if (selectedProviders.includes(id)) {
+          if (selectedProviders.length === 1) return;
+          setSelectedProviders(selectedProviders.filter(p => p !== id));
+        } else {
+          setSelectedProviders([...selectedProviders, id]);
+        }
+      };
+
+      const toggleSelectAll = () => {
+        if (selectedProviders.length === ALL_PROVIDERS.length) {
+          setSelectedProviders(["linkedin", "simplify"]);
+        } else {
+          setSelectedProviders(ALL_PROVIDERS.map(p => p.id));
+        }
+      };
+
+      const handleSubmit = () => {
+        onStartDiscovery({
+          providers: selectedProviders.join(","),
+          limit: limit
+        });
+        onClose();
+      };
+
+      return (
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div class="glass-panel w-full max-w-lg rounded-3xl border border-slate-700/80 p-6 shadow-2xl space-y-6">
+            {/* Modal Header */}
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h3 class="text-xl font-extrabold text-white flex items-center gap-2">
+                  <span>🚀</span> Launch Job Discovery Engine
+                </h3>
+                <p class="text-xs text-slate-400 mt-1">Select target job boards and set search batch limits.</p>
+              </div>
+              <button onClick={onClose} class="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
+            </div>
+
+            {/* Provider Picker */}
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-300">Target Job Boards & API Sources</label>
+                <button onClick={toggleSelectAll} class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
+                  {selectedProviders.length === ALL_PROVIDERS.length ? "Deselect Extra" : "Select All (6)"}
+                </button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                {ALL_PROVIDERS.map(p => {
+                  const isSelected = selectedProviders.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => toggleProvider(p.id)}
+                      class={`p-3 rounded-2xl border text-left transition-all tactile-btn flex items-center justify-between ${
+                        isSelected 
+                          ? 'bg-indigo-600/20 border-indigo-500/50 text-white shadow-md shadow-indigo-600/10' 
+                          : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <div class="flex items-center gap-2.5">
+                        <span class="text-lg">{p.icon}</span>
+                        <div>
+                          <div class="text-xs font-bold">{p.name}</div>
+                          <div class="text-[10px] text-slate-500 font-medium">{p.badge}</div>
+                        </div>
+                      </div>
+                      <div class={`w-5 h-5 rounded-lg border flex items-center justify-center text-xs ${isSelected ? 'bg-indigo-600 border-indigo-400 text-white font-bold' : 'border-slate-700'}`}>
+                        {isSelected ? "✓" : ""}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Limit Picker */}
+            <div>
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-300 block mb-2">Search Batch Limit per Provider</label>
+              <div class="grid grid-cols-3 gap-3">
+                {[
+                  { num: 2, label: "Quick Scan" },
+                  { num: 5, label: "Standard" },
+                  { num: 10, label: "Deep Search" }
+                ].map(l => (
+                  <button
+                    key={l.num}
+                    type="button"
+                    onClick={() => setLimit(l.num)}
+                    class={`p-3 rounded-xl border text-center transition tactile-btn ${
+                      limit === l.num 
+                        ? 'bg-indigo-600 border-indigo-500 text-white font-bold shadow-md' 
+                        : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <div class="text-sm font-extrabold">{l.num} Jobs</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">{l.num * selectedProviders.length} Max Total</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+              <button onClick={onClose} class="px-5 py-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs font-bold transition">
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-500/25 transition tactile-btn flex items-center gap-2"
+              >
+                <span>⚡</span> Start Job Search ({selectedProviders.length} Boards)
+              </button>
+            </div>
           </div>
         </div>
       );
