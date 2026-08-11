@@ -90,8 +90,8 @@ def send_discord_notification(
     fields.append({
         "name": "⚡ Quick Actions & Links",
         "value": (
-            f"🔗 [**Open Job Posting**]({apply_url})\n"
-            f"✅ [**Approve & Auto-Fill Application**](http://127.0.0.1:8766/approve?job_id={job_id})\n"
+            f"🔗 [**Open Target Job Posting**]({apply_url})\n"
+            f"✅ [**Approve Application**](http://127.0.0.1:8766/approve?job_id={job_id})\n"
             f"❌ [**Reject Application**](http://127.0.0.1:8766/reject?job_id={job_id})"
         ),
         "inline": False
