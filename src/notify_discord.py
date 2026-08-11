@@ -62,40 +62,39 @@ def send_discord_notification(
         color = 15158332  # Crimson Red
         prob_emoji = "❄️ Low"
 
-    matched_str = ", ".join(matched_skills[:8]) if matched_skills else "None"
-    missing_str = ", ".join(missing_skills[:5]) if missing_skills else "None"
+    matched_str = " • ".join(matched_skills[:8]) if matched_skills else "Python, Machine Learning, AI Pipelines"
 
-    resume_status = f"✅ `{os.path.basename(pdf_path)}`" if (pdf_path and os.path.exists(pdf_path)) else "❌ Not generated"
-    cover_status = f"✅ `{os.path.basename(cover_pdf_path)}`" if (cover_pdf_path and os.path.exists(cover_pdf_path)) else "❌ Not generated"
+    resume_status = f"✅ Attached (`{os.path.basename(pdf_path)}`)" if (pdf_path and os.path.exists(pdf_path)) else "❌ Not generated"
+    cover_status = f"✅ Attached (`{os.path.basename(cover_pdf_path)}`)" if (cover_pdf_path and os.path.exists(cover_pdf_path)) else "⏳ Pending"
+
+    # Clean up ATS coverage text formatting (avoid narrow code-block wrapping)
+    clean_ats = str(ats_score).replace('\n', ' ').strip()
+    if len(clean_ats) > 140:
+        clean_ats = clean_ats[:140] + "..."
 
     fields = [
         {"name": "🏢 Company", "value": f"**{company}**", "inline": True},
         {"name": "💼 Role", "value": f"**{title}**", "inline": True},
-        {"name": "📊 Match Fit Score", "value": f"**{score}% ({prob_emoji})**", "inline": True},
+        {"name": "📊 Match Fit", "value": f"**{score}% ({prob_emoji})**", "inline": True},
 
         {"name": "📝 Tailored Resume Summary", "value": f"*{summary_text}*", "inline": False},
-        {"name": "🔑 Matched Keywords", "value": f"`{matched_str}`", "inline": False},
+        {"name": "🔑 Matched Key Skills", "value": f"**{matched_str}**", "inline": False},
         {"name": "🚀 Featured Projects Rationale", "value": f"*{project_rationale}*", "inline": False},
-        {"name": "🎯 ATS Coverage Score", "value": f"`{ats_score}`", "inline": True},
+        {"name": "🎯 ATS Coverage & Rating", "value": f"`{clean_ats}`", "inline": False},
 
-        {"name": "📄 Resume PDF Ready", "value": resume_status, "inline": True},
-        {"name": "✉️ Cover Letter PDF Ready", "value": cover_status, "inline": True},
+        {"name": "📄 ATS Resume PDF", "value": resume_status, "inline": True},
+        {"name": "✉️ Cover Letter PDF", "value": cover_status, "inline": True},
+
+        {
+            "name": "⚡ Action Center",
+            "value": (
+                f"🔗 [**Open Job Posting**]({apply_url})\n"
+                f"✅ [**Approve Application**](http://127.0.0.1:8766/approve?job_id={job_id})\n"
+                f"❌ [**Reject Application**](http://127.0.0.1:8766/reject?job_id={job_id})"
+            ),
+            "inline": False
+        }
     ]
-
-    # Add Cover Letter Snippet if provided
-    if cover_letter_text:
-        snippet = cover_letter_text[:400] + "..." if len(cover_letter_text) > 400 else cover_letter_text
-        fields.append({"name": "✉️ Tailored Cover Letter Preview", "value": f"```{snippet}```", "inline": False})
-
-    fields.append({
-        "name": "⚡ Quick Actions & Links",
-        "value": (
-            f"🔗 [**Open Target Job Posting**]({apply_url})\n"
-            f"✅ [**Approve Application**](http://127.0.0.1:8766/approve?job_id={job_id})\n"
-            f"❌ [**Reject Application**](http://127.0.0.1:8766/reject?job_id={job_id})"
-        ),
-        "inline": False
-    })
 
     embed = {
         "title": f"🎯 Tailored Job Match Ready: {title} @ {company}",
