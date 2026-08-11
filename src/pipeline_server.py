@@ -75,9 +75,12 @@ class PipelineHandler(BaseHTTPRequestHandler):
                 with open(json_path, "w", encoding="utf-8") as f:
                     json.dump(tailored_json, f, indent=2)
 
-                # 3. Generate PDF Resume
+                # 3. Generate PDF Resume using virtualenv python
                 pdf_path = os.path.join(out_dir, "Siddharth_Bhople_Resume.pdf")
-                cmd = [sys.executable, os.path.join(os.path.dirname(__file__), "generate_pdf.py"), "--profile", json_path, "--output", pdf_path]
+                venv_py = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "venv", "Scripts", "python.exe"))
+                py_exe = venv_py if os.path.exists(venv_py) else sys.executable
+
+                cmd = [py_exe, os.path.join(os.path.dirname(__file__), "generate_pdf.py"), "--profile", json_path, "--output", pdf_path]
                 subprocess.run(cmd, check=True)
                 print(f"[PIPELINE SERVER] Compiled PDF Resume: {pdf_path}")
 

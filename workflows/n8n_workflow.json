@@ -321,7 +321,7 @@
       "main": [
         [
           {
-            "node": "Stage 5: Discord HITL Notification",
+            "node": "Stage 5: Wait for Human Approval Webhook",
             "type": "main",
             "index": 0
           }
