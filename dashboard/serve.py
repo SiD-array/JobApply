@@ -67,8 +67,17 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
         else:
             super().do_GET()
 
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def do_POST(self):
-        if self.path in ["/api/delete-application", "/api/applications/delete"]:
+        import urllib.parse
+        clean_path = urllib.parse.urlparse(self.path).path.rstrip("/")
+        if clean_path in ["/api/delete-application", "/api/applications/delete"]:
             content_length = int(self.headers.get("Content-Length", 0))
             post_data = self.rfile.read(content_length).decode("utf-8")
             try:
@@ -80,9 +89,21 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
                 if os.path.exists(apps_file):
                     with open(apps_file, "r", encoding="utf-8") as f:
                         apps = json.load(f)
-                    apps = [item for item in apps if str(item.get("job_id")) != job_id]
+                    apps = [item for item in apps if str(item.get("job_id")) != job_id and str(item.get("id")) != job_id]
                     with open(apps_file, "w", encoding="utf-8") as f:
                         json.dump(apps, f, indent=2)
+
+                disc_file = os.path.join(PROJECT_ROOT, "samples", "discovered_jobs.json")
+                if os.path.exists(disc_file):
+                    try:
+                        with open(disc_file, "r", encoding="utf-8") as f:
+                            jobs = json.load(f)
+                        if isinstance(jobs, list):
+                            jobs = [j for j in jobs if str(j.get("job_id")) != job_id and str(j.get("id")) != job_id]
+                            with open(disc_file, "w", encoding="utf-8") as f:
+                                json.dump(jobs, f, indent=2)
+                    except Exception:
+                        pass
 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")

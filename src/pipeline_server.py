@@ -39,8 +39,22 @@ def save_applications(apps):
 
 def delete_application(job_id):
     apps = load_applications()
-    updated = [item for item in apps if str(item.get("job_id")) != str(job_id)]
+    updated = [item for item in apps if str(item.get("job_id")) != str(job_id) and str(item.get("id")) != str(job_id)]
     save_applications(updated)
+
+    # Also clean up samples/discovered_jobs.json if present
+    disc_file = os.path.abspath("samples/discovered_jobs.json")
+    if os.path.exists(disc_file):
+        try:
+            with open(disc_file, "r", encoding="utf-8") as f:
+                jobs = json.load(f)
+            if isinstance(jobs, list):
+                jobs = [j for j in jobs if str(j.get("job_id")) != str(job_id) and str(j.get("id")) != str(job_id)]
+                with open(disc_file, "w", encoding="utf-8") as f:
+                    json.dump(jobs, f, indent=2)
+        except Exception:
+            pass
+
     return updated
 
 
@@ -233,9 +247,10 @@ class PipelineHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+        clean_path = parsed.path.rstrip("/")
 
         # API: Delete Application from Datasheet
-        if parsed.path in ["/api/delete-application", "/api/applications/delete"]:
+        if clean_path in ["/api/delete-application", "/api/applications/delete"]:
             content_length = int(self.headers.get("Content-Length", 0))
             post_data = self.rfile.read(content_length).decode("utf-8")
             try:

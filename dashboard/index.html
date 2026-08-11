@@ -123,41 +123,17 @@
       // Fetch live data from serve API
       const fetchLiveData = async () => {
         try {
-          // Fetch persistent applications store & discovered jobs in parallel
-          const [appsRes, jobsRes, insightsRes] = await Promise.all([
+          // Fetch persistent applications store
+          const [appsRes, insightsRes] = await Promise.all([
             fetch("/api/applications").catch(() => null),
-            fetch("/api/jobs").catch(() => null),
             fetch("/api/insights").catch(() => null)
           ]);
 
           let appsData = (appsRes && appsRes.ok) ? await appsRes.json() : [];
-          let jobsData = (jobsRes && jobsRes.ok) ? await jobsRes.json() : [];
           let insightsData = (insightsRes && insightsRes.ok) ? await insightsRes.json() : {};
 
-          // Combine tracked applications with discovered jobs
-          const combined = Array.isArray(appsData) ? [...appsData] : [];
-          if (Array.isArray(jobsData)) {
-            jobsData.forEach((j, idx) => {
-              const id = str(j.job_id || j.id || `job_${idx}`);
-              if (!combined.some(a => str(a.job_id || a.id) === id)) {
-                combined.push({
-                  job_id: id,
-                  title: j.title || "Software Engineer",
-                  company: j.company || "Target Company",
-                  location: j.location || "Remote / USA",
-                  apply_url: j.url || j.apply_url || "#",
-                  career_url: `https://www.google.com/search?q=${encodeURIComponent(j.company || 'Company')}+careers`,
-                  match_score: j.score || 85,
-                  status: j.status || "Discovered",
-                  pdf_path: "output_resumes/Siddharth_Bhople_Resume.pdf",
-                  updated_at: new Date().toISOString()
-                });
-              }
-            });
-          }
-
-          if (combined.length > 0) {
-            setApplications(combined);
+          if (Array.isArray(appsData) && appsData.length > 0) {
+            setApplications(appsData);
           }
           if (insightsData) {
             setInsights(insightsData);
@@ -171,14 +147,13 @@
 
       useEffect(() => {
         fetchLiveData();
-        // Fast 2-second polling for immediate live updates
-        const interval = setInterval(fetchLiveData, 2000);
+        const interval = setInterval(fetchLiveData, 3000);
         return () => clearInterval(interval);
       }, []);
 
       const handleStatusChange = async (jobId, newStatus) => {
         // Optimistic UI Update
-        setApplications(prev => prev.map(app => (app.job_id === jobId || app.id === jobId) ? { ...app, status: newStatus } : app));
+        setApplications(prev => prev.map(app => (str(app.job_id) === str(jobId) || str(app.id) === str(jobId)) ? { ...app, status: newStatus } : app));
 
         try {
           await fetch("/api/update-status", {
@@ -192,8 +167,8 @@
       };
 
       const handleDeleteJob = async (jobId) => {
-        if (!confirm("Are you sure you want to delete this job entry from your datasheet?")) return;
-        setApplications(prev => prev.filter(app => (app.job_id !== jobId && app.id !== jobId)));
+        // Instant Optimistic Removal from UI
+        setApplications(prev => prev.filter(app => str(app.job_id) !== str(jobId) && str(app.id) !== str(jobId)));
 
         try {
           await fetch("/api/delete-application", {
