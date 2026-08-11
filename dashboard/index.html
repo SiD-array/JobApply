@@ -844,6 +844,9 @@
        DISCOVERY MODAL — Interactive Job Provider Picker & Batch Configurator
        ========================================================================= */
     function DiscoveryModal({ isOpen, onClose, onStartDiscovery, discoveryStatus }) {
+      const [selectedProviders, setSelectedProviders] = useState(["linkedin", "simplify", "greenhouse", "lever", "ashby", "workday"]);
+      const [limit, setLimit] = useState(3);
+
       if (!isOpen) return null;
 
       const ALL_PROVIDERS = [
@@ -854,9 +857,6 @@
         { id: "ashby", name: "Ashby HQ", icon: "🏢", badge: "Direct API" },
         { id: "workday", name: "Workday Portal", icon: "🏛️", badge: "Enterprise" }
       ];
-
-      const [selectedProviders, setSelectedProviders] = useState(["linkedin", "simplify", "greenhouse", "lever", "ashby", "workday"]);
-      const [limit, setLimit] = useState(3);
 
       const toggleProvider = (id) => {
         if (selectedProviders.includes(id)) {
