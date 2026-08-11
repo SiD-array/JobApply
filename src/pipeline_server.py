@@ -15,6 +15,71 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from notify_discord import send_discord_notification
 
 class PipelineHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path.startswith("/approve"):
+            job_path = os.path.abspath("output_resumes/current_job.json")
+            pdf_path = os.path.abspath("output_resumes/Siddharth_Bhople_Resume.pdf")
+
+            venv_py = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "venv", "Scripts", "python.exe"))
+            py_exe = venv_py if os.path.exists(venv_py) else sys.executable
+
+            cmd = [py_exe, os.path.join(os.path.dirname(__file__), "apply_playwright.py")]
+            if os.path.exists(job_path):
+                cmd.extend(["--job", job_path])
+            if os.path.exists(pdf_path):
+                cmd.extend(["--pdf", pdf_path])
+
+            try:
+                subprocess.Popen(cmd)
+            except Exception as e:
+                print(f"[PIPELINE SERVER ERROR] Failed to launch Playwright: {e}")
+
+            html = """<!DOCTYPE html>
+<html>
+<head><title>JobApply - Approved!</title><style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+  .card { background: #1e293b; padding: 40px; border-radius: 16px; text-align: center; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+  h1 { color: #22c55e; margin-bottom: 8px; font-size: 24px; }
+  p { color: #94a3b8; font-size: 16px; line-height: 1.5; }
+</style></head>
+<body>
+  <div class="card">
+    <h1>🚀 Application Approved!</h1>
+    <p>Playwright auto-filler is launching your browser right now to fill out the application form with your tailored resume.</p>
+  </div>
+</body>
+</html>"""
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(html.encode("utf-8"))
+
+        elif self.path.startswith("/reject"):
+            html = """<!DOCTYPE html>
+<html>
+<head><title>JobApply - Skipped</title><style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+  .card { background: #1e293b; padding: 40px; border-radius: 16px; text-align: center; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+  h1 { color: #ef4444; margin-bottom: 8px; font-size: 24px; }
+  p { color: #94a3b8; font-size: 16px; line-height: 1.5; }
+</style></head>
+<body>
+  <div class="card">
+    <h1>❌ Application Skipped</h1>
+    <p>This job application has been logged as skipped.</p>
+  </div>
+</body>
+</html>"""
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(html.encode("utf-8"))
+        else:
+            self.send_response(404)
+            self.end_headers()
+
     def do_POST(self):
         if self.path in ["/generate-pdf", "/webhook/generate-pdf"]:
             content_length = int(self.headers.get("Content-Length", 0))
@@ -130,7 +195,7 @@ class PipelineHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass # Suppress standard HTTP logs
 
-def run_server(port=8765):
+def run_server(port=8766):
     server_address = ("127.0.0.1", port)
     httpd = HTTPServer(server_address, PipelineHandler)
     print(f"[PIPELINE SERVER] Listening on http://127.0.0.1:{port}/generate-pdf...")
