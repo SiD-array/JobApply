@@ -114,30 +114,41 @@ class PipelineHandler(BaseHTTPRequestHandler):
             job_id = params.get("job_id", [""])[0]
             new_status = params.get("status", ["Approved" if parsed.path == "/approve" else "Rejected"])[0]
 
-            job_path = os.path.abspath("output_resumes/current_job.json")
-            job_info = {}
-            if os.path.exists(job_path):
-                try:
-                    with open(job_path, "r", encoding="utf-8") as f:
-                        job_info = json.load(f)
-                except Exception:
-                    pass
+            apps = load_applications()
+            target_app = next((item for item in apps if str(item.get("job_id")) == str(job_id)), None)
 
-            if not job_info and job_id:
-                job_info = {"job_id": job_id, "company": "Target Company", "title": "Software Engineer"}
+            if target_app:
+                target_app["status"] = new_status
+                target_app["updated_at"] = datetime.now(timezone.utc).isoformat()
+                save_applications(apps)
+                updated_apps = apps
+            else:
+                job_path = os.path.abspath("output_resumes/current_job.json")
+                job_info = {}
+                if os.path.exists(job_path):
+                    try:
+                        with open(job_path, "r", encoding="utf-8") as f:
+                            job_info = json.load(f)
+                    except Exception:
+                        pass
 
-            pdf_path = os.path.abspath("output_resumes/Siddharth_Bhople_Resume.pdf")
-            tailored_json_path = os.path.abspath("output_resumes/tailored_profile.json")
-            tailored_data = {}
-            if os.path.exists(tailored_json_path):
-                try:
-                    with open(tailored_json_path, "r", encoding="utf-8") as f:
-                        tailored_data = json.load(f)
-                except Exception:
-                    pass
+                if not job_info and job_id:
+                    job_info = {"job_id": job_id, "company": "Target Company", "title": "Software Engineer"}
+                elif job_id:
+                    job_info["job_id"] = job_id
 
-            updated_apps = update_or_add_application(job_info, tailored_data, pdf_path, status=new_status)
-            target_app = next((item for item in updated_apps if item.get("job_id") == job_id), updated_apps[0] if updated_apps else {})
+                pdf_path = os.path.abspath("output_resumes/Siddharth_Bhople_Resume.pdf")
+                tailored_json_path = os.path.abspath("output_resumes/tailored_profile.json")
+                tailored_data = {}
+                if os.path.exists(tailored_json_path):
+                    try:
+                        with open(tailored_json_path, "r", encoding="utf-8") as f:
+                            tailored_data = json.load(f)
+                    except Exception:
+                        pass
+
+                updated_apps = update_or_add_application(job_info, tailored_data, pdf_path, status=new_status)
+                target_app = next((item for item in updated_apps if str(item.get("job_id")) == str(job_id)), updated_apps[0] if updated_apps else {})
 
             title = target_app.get("title", "Software Engineer")
             company = target_app.get("company", "Company")
@@ -363,6 +374,7 @@ class PipelineHandler(BaseHTTPRequestHandler):
 
 
 def run_server(port=8766):
+    HTTPServer.allow_reuse_address = True
     server_address = ("127.0.0.1", port)
     httpd = HTTPServer(server_address, PipelineHandler)
     print(f"[PIPELINE SERVER] Listening on http://127.0.0.1:{port}/generate-pdf...")

@@ -113,9 +113,9 @@
     function App() {
       const [activeTab, setActiveTab] = useState("datasheet");
       const [viewMode, setViewMode] = useState("table"); // "table" or "kanban"
-      const [applications, setApplications] = useState([]);
+      const [applications, setApplications] = useState(DEFAULT_APPLICATIONS);
       const [insights, setInsights] = useState({});
-      const [loading, setLoading] = useState(true);
+      const [loading, setLoading] = useState(false);
       const [searchQuery, setSearchQuery] = useState("");
       const [statusFilter, setStatusFilter] = useState("All");
       const [selectedJob, setSelectedJob] = useState(null);
@@ -123,38 +123,56 @@
       // Fetch live data from serve API
       const fetchLiveData = async () => {
         try {
-          // Fetch persistent applications store
-          let appsData = [];
-          try {
-            const appsRes = await fetch("/api/applications");
-            appsData = await appsRes.json();
-          } catch (e) {
-            appsData = [];
+          // Fetch persistent applications store & discovered jobs in parallel
+          const [appsRes, jobsRes, insightsRes] = await Promise.all([
+            fetch("/api/applications").catch(() => null),
+            fetch("/api/jobs").catch(() => null),
+            fetch("/api/insights").catch(() => null)
+          ]);
+
+          let appsData = (appsRes && appsRes.ok) ? await appsRes.json() : [];
+          let jobsData = (jobsRes && jobsRes.ok) ? await jobsRes.json() : [];
+          let insightsData = (insightsRes && insightsRes.ok) ? await insightsRes.json() : {};
+
+          // Combine tracked applications with discovered jobs
+          const combined = Array.isArray(appsData) ? [...appsData] : [];
+          if (Array.isArray(jobsData)) {
+            jobsData.forEach((j, idx) => {
+              const id = str(j.job_id || j.id || `job_${idx}`);
+              if (!combined.some(a => str(a.job_id || a.id) === id)) {
+                combined.push({
+                  job_id: id,
+                  title: j.title || "Software Engineer",
+                  company: j.company || "Target Company",
+                  location: j.location || "Remote / USA",
+                  apply_url: j.url || j.apply_url || "#",
+                  career_url: `https://www.google.com/search?q=${encodeURIComponent(j.company || 'Company')}+careers`,
+                  match_score: j.score || 85,
+                  status: j.status || "Discovered",
+                  pdf_path: "output_resumes/Siddharth_Bhople_Resume.pdf",
+                  updated_at: new Date().toISOString()
+                });
+              }
+            });
           }
 
-          // Fetch insights
-          let insightsData = {};
-          try {
-            const insightsRes = await fetch("/api/insights");
-            insightsData = await insightsRes.json();
-          } catch (e) {
-            insightsData = {};
+          if (combined.length > 0) {
+            setApplications(combined);
           }
-
-          setApplications(Array.isArray(appsData) && appsData.length > 0 ? appsData : DEFAULT_APPLICATIONS);
-          setInsights(insightsData);
+          if (insightsData) {
+            setInsights(insightsData);
+          }
         } catch (e) {
           console.error("Live data load error", e);
-          setApplications(DEFAULT_APPLICATIONS);
-        } finally {
-          setLoading(false);
         }
       };
 
+      const str = (val) => String(val || "");
+
       useEffect(() => {
         fetchLiveData();
-        // Polling every 10 seconds for live synchronization
-        const interval = setInterval(fetchLiveData, 10000);
+        // Fast 2-second polling for immediate live updates
+        const interval = setInterval(fetchLiveData, 2000);
         return () => clearInterval(interval);
       }, []);
 

@@ -28,7 +28,13 @@ class Job:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert Job instance to standard JSON dictionary."""
-        return asdict(self)
+        d = asdict(self)
+        clean_company = "".join(c for c in self.company if c.isalnum()).lower()
+        clean_title = "".join(c for c in self.title if c.isalnum()).lower()
+        url_hash = hex(abs(hash(self.url or self.title)))[2:8]
+        d["job_id"] = f"{clean_company}_{clean_title[:15]}_{url_hash}"
+        d["apply_url"] = self.url
+        return d
 
 
 @dataclass
