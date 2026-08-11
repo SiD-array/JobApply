@@ -363,32 +363,88 @@
 
     /* ---------------- APPLICATIONS TAB ---------------- */
     function ApplicationsTab({ jobs, setJobs }) {
-      const columns = ["Discovered", "Applied", "OA", "Interview", "Offer", "Rejected"];
+      const columns = ["Approved", "Applied", "Not Applied", "Interviewing", "Offer", "Rejected"];
+
+      const handleStatusChange = async (jobId, newStatus) => {
+        try {
+          await fetch("/api/update-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ job_id: jobId, status: newStatus })
+          });
+          setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: newStatus } : j));
+        } catch (e) {
+          console.error("Status update error", e);
+        }
+      };
 
       return (
         <div class="space-y-6">
-          <div>
-            <h2 class="text-2xl font-bold">Application Lifecycle Kanban</h2>
-            <p class="text-slate-400 text-sm">Track active applications across stages</p>
+          <div class="flex justify-between items-center">
+            <div>
+              <h2 class="text-2xl font-bold">Structured Job Application Tracker</h2>
+              <p class="text-slate-400 text-sm">Track approved jobs, company career links, and ATS tailored resume versions</p>
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-6 gap-4 overflow-x-auto pb-4">
+          <div class="grid grid-cols-1 md:grid-cols-6 gap-4 overflow-x-auto pb-4 custom-scrollbar">
             {columns.map(col => {
-              const colJobs = jobs.filter(j => j.status === col);
+              const colJobs = jobs.filter(j => (j.status || "Approved") === col || (col === "Approved" && !j.status));
               return (
-                <div key={col} class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col min-w-[200px]">
+                <div key={col} class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col min-w-[240px]">
                   <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-sm text-slate-300">{col}</h3>
-                    <span class="px-2 py-0.5 bg-slate-800 text-xs font-semibold rounded-md">{colJobs.length}</span>
+                    <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                      <span class={`w-2 h-2 rounded-full ${col === 'Applied' ? 'bg-emerald-400' : col === 'Approved' ? 'bg-indigo-400' : col === 'Interviewing' ? 'bg-amber-400' : col === 'Offer' ? 'bg-cyan-400' : 'bg-slate-500'}`}></span>
+                      {col}
+                    </h3>
+                    <span class="px-2.5 py-0.5 bg-slate-800 text-xs font-bold text-slate-300 rounded-full">{colJobs.length}</span>
                   </div>
+
                   <div class="space-y-3 flex-1">
                     {colJobs.map(j => (
-                      <div key={j.id} class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-xl shadow-sm hover:border-indigo-500/50 transition">
-                        <div class="font-semibold text-sm text-white">{j.title}</div>
-                        <div class="text-xs text-slate-400 mb-2">{j.company}</div>
-                        <div class="flex justify-between items-center text-xs">
-                          <span class="text-indigo-400 font-bold">{j.score}%</span>
-                          <span class="text-slate-500">{j.source}</span>
+                      <div key={j.id} class="bg-slate-800/90 border border-slate-700/60 p-4 rounded-xl shadow-sm hover:border-indigo-500/50 transition flex flex-col justify-between">
+                        <div>
+                          <div class="flex justify-between items-start mb-1">
+                            <h4 class="font-bold text-sm text-white leading-snug">{j.title}</h4>
+                            <span class="text-xs font-bold text-indigo-400 ml-2">{j.score}%</span>
+                          </div>
+                          <div class="text-xs text-slate-400 font-medium mb-1">{j.company}</div>
+                          <div class="text-xs text-slate-500 mb-3">{j.location || "Remote / USA"}</div>
+
+                          {j.tailored_summary && (
+                            <p class="text-xs text-slate-300 italic bg-slate-900/50 p-2 rounded-lg mb-3 border border-slate-800/80 line-clamp-2">
+                              "{j.tailored_summary}"
+                            </p>
+                          )}
+                        </div>
+
+                        <div class="space-y-2 pt-2 border-t border-slate-700/50">
+                          {/* Links Row */}
+                          <div class="flex items-center gap-2">
+                            <a href={j.url} target="_blank" class="flex-1 text-center py-1.5 px-2 bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white font-medium text-xs rounded-lg transition">
+                              🔗 Apply Page
+                            </a>
+                            <a href={j.career_url || `https://www.google.com/search?q=${encodeURIComponent(j.company)}+careers`} target="_blank" class="flex-1 text-center py-1.5 px-2 bg-slate-700/50 text-slate-300 border border-slate-600/50 hover:bg-slate-700 font-medium text-xs rounded-lg transition">
+                              🏢 Career Portal
+                            </a>
+                          </div>
+
+                          {/* Status Selector Dropdown */}
+                          <div class="flex items-center justify-between gap-2 pt-1">
+                            <span class="text-[11px] font-semibold text-slate-400">Status:</span>
+                            <select 
+                              value={j.status || "Approved"}
+                              onChange={(e) => handleStatusChange(j.id, e.target.value)}
+                              class="bg-slate-900 text-xs text-slate-200 border border-slate-700 rounded-md px-2 py-1 focus:outline-none focus:border-indigo-500 font-semibold"
+                            >
+                              <option value="Approved">Approved</option>
+                              <option value="Applied">Applied</option>
+                              <option value="Not Applied">Not Applied</option>
+                              <option value="Interviewing">Interviewing</option>
+                              <option value="Offer">Offer</option>
+                              <option value="Rejected">Rejected</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
                     ))}
