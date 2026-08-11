@@ -294,6 +294,9 @@ def main():
                 "company": "Target Company"
             }
 
+    if isinstance(job_data, list):
+        job_data = job_data[0] if len(job_data) > 0 else {}
+
     evaluator = AIEvaluator(provider=args.provider)
     result = evaluator.evaluate_job(profile_data, job_data, args.threshold)
 

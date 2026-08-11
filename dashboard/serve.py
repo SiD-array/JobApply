@@ -42,7 +42,7 @@ def run_discovery_task(limit=3, providers="linkedin,simplify,greenhouse,lever,as
         cmd = [
             venv_python,
             os.path.join(PROJECT_ROOT, "src", "discover_jobs.py"),
-            "--webhook", "http://localhost:5678/webhook/job-ingest",
+            "--webhook", "none",
             "--providers", providers,
             "--limit", str(limit)
         ]

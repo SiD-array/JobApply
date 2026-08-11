@@ -112,16 +112,57 @@ def main():
     # Convert to JSON dicts
     jobs_dict = [j.to_dict() for j in jobs]
 
-    # Save standard output
+    # Save raw discovered jobs cache
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(jobs_dict, f, indent=2)
 
     print(f"\n[SAVED] Saved {len(jobs)} normalized jobs to: {args.output}")
 
-    # Optionally post to n8n
-    if args.webhook and args.webhook.lower() not in ["none", "null", "disabled", "false"]:
-        engine.send_to_n8n(jobs, args.webhook)
+    # ── Write directly to the Dashboard applications tracker ─────────────────
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    apps_file = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(args.output)), "..", "output_resumes", "applications.json")
+    )
+    existing_apps = []
+    if os.path.exists(apps_file):
+        try:
+            with open(apps_file, "r", encoding="utf-8") as f:
+                existing_apps = json.load(f)
+            if not isinstance(existing_apps, list):
+                existing_apps = []
+        except Exception:
+            existing_apps = []
+
+    existing_ids = {str(a.get("job_id", "")) for a in existing_apps}
+    new_count = 0
+
+    for jd in jobs_dict:
+        jid = str(jd.get("job_id", ""))
+        if jid and jid not in existing_ids:
+            existing_apps.append({
+                "job_id":           jid,
+                "title":            jd.get("title", ""),
+                "company":          jd.get("company", ""),
+                "location":         jd.get("location", "Remote / USA"),
+                "apply_url":        jd.get("apply_url") or jd.get("url", ""),
+                "career_url":       f"https://www.google.com/search?q={jd.get('company', '').replace(' ', '%20')}+careers",
+                "match_score":      int(jd.get("score") or 0),
+                "status":           "New",
+                "source":           jd.get("source", ""),
+                "tailored_summary": "",
+                "matched_keywords": jd.get("matched_skills") or [],
+                "pdf_path":         "",
+                "created_at":       now_iso,
+                "updated_at":       now_iso,
+            })
+            existing_ids.add(jid)
+            new_count += 1
+
+    with open(apps_file, "w", encoding="utf-8") as f:
+        json.dump(existing_apps, f, indent=2, ensure_ascii=False)
+
+    print(f"[DASHBOARD] Added {new_count} new job(s) to the tracker (total: {len(existing_apps)}).")
 
 
 if __name__ == "__main__":

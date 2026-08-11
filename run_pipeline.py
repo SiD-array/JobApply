@@ -71,6 +71,11 @@ def main():
     with open(job_file_path, "r", encoding="utf-8") as f:
         job_data = json.load(f)
 
+    if isinstance(job_data, list) and len(job_data) > 0:
+        job_data = job_data[0]
+    elif isinstance(job_data, list):
+        job_data = {"title": args.title, "company": args.company, "description": args.title}
+
     # Select best 3 projects matching this job
     selected_projects = proj_manager.select_best_projects(job_data, limit=3)
 

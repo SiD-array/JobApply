@@ -347,6 +347,9 @@ def main():
         stdin_text = sys.stdin.read()
         job_data = json.loads(stdin_text)
 
+    if isinstance(job_data, list):
+        job_data = job_data[0] if len(job_data) > 0 else {}
+
     tailor = ResumeTailor(provider=args.provider)
     result = tailor.tailor_resume(profile_data, job_data)
 

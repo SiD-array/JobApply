@@ -3,21 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobApply AI — Executive Recruiter Dashboard & Application Datasheet</title>
-  
-  <!-- Google Fonts & Tailwind CSS CDN -->
+  <title>JobApply — Job Application Tracker</title>
+  <meta name="description" content="Track your AI job applications, discovery status, and pipeline from one professional dashboard.">
+
+  <!-- Google Fonts: Inter + JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- React & Babel High-Availability CDNs -->
+
+  <!-- React, ReactDOM, Babel (Cloudflare CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
-
-  <!-- Chart.js CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -25,846 +23,900 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            }
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Menlo', 'monospace'],
           }
         }
       }
     }
   </script>
-  
+
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+
     body {
-      background-color: #090d16;
-      color: #f8fafc;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-image: 
-        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
-      background-attachment: fixed;
+      background: #080d1a;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
-    .glass-panel {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+    /* Layout containers */
+    .app-shell { display: flex; height: 100vh; overflow: hidden; }
+    .sidebar {
+      width: 210px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 10px;
+      background: #0a0f1c;
+      border-right: 1px solid rgba(255,255,255,0.06);
     }
-    .glass-card {
-      background: rgba(30, 41, 59, 0.6);
-      backdrop-filter: blur(12px);
+    .main-content { flex: 1; overflow-y: auto; padding: 36px 40px; }
+
+    /* Cards */
+    .card {
+      background: rgba(15, 23, 42, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(6px);
+      border-radius: 10px;
     }
-    .glass-card:hover {
-      border-color: rgba(99, 102, 241, 0.35);
-      box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.18);
+
+    /* Navigation */
+    .nav-brand { padding: 4px 10px 24px; }
+    .nav-brand-name { font-size: 0.92rem; font-weight: 700; color: #f1f5f9; letter-spacing: -0.02em; }
+    .nav-brand-sub  { font-size: 0.68rem; color: #334155; font-weight: 500; margin-top: 2px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 7px;
+      font-size: 0.82rem; font-weight: 500; color: #475569;
+      cursor: pointer; transition: all 0.13s; margin-bottom: 1px;
+      border: none; background: transparent; width: 100%; text-align: left;
     }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    .nav-item:hover { background: rgba(255,255,255,0.04); color: #94a3b8; }
+    .nav-item.active { background: rgba(99,102,241,0.12); color: #a5b4fc; }
+    .nav-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.5; flex-shrink: 0; }
+    .nav-dot.active { opacity: 1; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.78rem; border: none; cursor: pointer; transition: all 0.13s; border-radius: 7px; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #4f46e5; color: #fff; padding: 7px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #4338ca; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost { background: rgba(255,255,255,0.05); color: #94a3b8; padding: 7px 14px; border: 1px solid rgba(255,255,255,0.09); }
+    .btn-ghost:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+    .btn-link { background: transparent; color: #6366f1; padding: 6px 12px; font-size: 0.75rem; border: 1px solid rgba(99,102,241,0.25); border-radius: 6px; }
+    .btn-link:hover { background: rgba(99,102,241,0.08); }
+    .btn-danger { background: rgba(239,68,68,0.08); color: #f87171; padding: 6px 12px; border: 1px solid rgba(239,68,68,0.18); font-size: 0.75rem; border-radius: 6px; }
+    .btn-danger:hover { background: rgba(239,68,68,0.15); }
+
+    /* Status badges */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 5px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
+    .badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .badge-new          { background: rgba(14,165,233,0.1);  color: #38bdf8; border: 1px solid rgba(14,165,233,0.2);  }
+    .badge-reviewing    { background: rgba(99,102,241,0.1);  color: #a5b4fc; border: 1px solid rgba(99,102,241,0.2);  }
+    .badge-applied      { background: rgba(16,185,129,0.1);  color: #34d399; border: 1px solid rgba(16,185,129,0.2);  }
+    .badge-interviewing { background: rgba(245,158,11,0.1);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.2);  }
+    .badge-offer        { background: rgba(139,92,246,0.1);  color: #c4b5fd; border: 1px solid rgba(139,92,246,0.2);  }
+    .badge-rejected     { background: rgba(239,68,68,0.08); color: #f87171; border: 1px solid rgba(239,68,68,0.18); }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.67rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #334155;
+      background: rgba(10,16,30,0.6);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
     }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #0f172a;
+    .data-table tbody td {
+      padding: 11px 14px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: middle;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
+    .data-table tbody tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover td { background: rgba(255,255,255,0.015); }
+
+    /* Filter pills */
+    .filter-pill { padding: 4px 12px; border-radius: 5px; font-size: 0.75rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.12s; background: transparent; color: #475569; }
+    .filter-pill:hover { color: #94a3b8; background: rgba(255,255,255,0.04); }
+    .filter-pill.active { background: rgba(99,102,241,0.15); color: #a5b4fc; border-color: rgba(99,102,241,0.3); }
+
+    /* Score bar */
+    .score-bar { height: 3px; width: 44px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+
+    /* Modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 24px; }
+    .modal-box { background: #0c1425; border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 28px; width: 100%; max-width: 560px; box-shadow: 0 30px 70px -15px rgba(0,0,0,0.7); }
+
+    /* Inputs */
+    .input-text { background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.09); color: #cbd5e1; font-size: 0.8rem; padding: 7px 12px; border-radius: 7px; outline: none; font-family: inherit; transition: border-color 0.15s; }
+    .input-text:focus { border-color: rgba(99,102,241,0.45); }
+    .input-text::placeholder { color: #1e293b; }
+
+    /* Status picker dropdown */
+    .status-picker-wrapper { position: relative; display: inline-block; }
+    .status-picker-badge { background: none; border: none; cursor: pointer; padding: 0; }
+    .status-picker-badge:hover .badge { opacity: 0.85; }
+    .status-dropdown {
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 150;
+      background: #0c1425; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 9px; padding: 5px; min-width: 160px;
+      box-shadow: 0 16px 40px -8px rgba(0,0,0,0.7);
     }
-    .tactile-btn {
-      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .tactile-btn:active {
-      transform: scale(0.95);
-    }
-    .pulse-glow {
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
-    }
+    .status-dropdown-item { display: block; width: 100%; padding: 6px 8px; border-radius: 5px; border: none; background: transparent; cursor: pointer; text-align: left; margin-bottom: 2px; }
+    .status-dropdown-item:hover { background: rgba(255,255,255,0.05); }
+    .status-dropdown-item.selected { background: rgba(99,102,241,0.1); }
+
+    /* Empty state */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 72px 24px; text-align: center; gap: 10px; }
+    .empty-state-icon { width: 44px; height: 44px; border-radius: 10px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.18); display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+
+    /* Animations */
+    @keyframes pulse-subtle { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .pulsing { animation: pulse-subtle 2s ease-in-out infinite; }
+
+    /* Section header */
+    .section-header { margin-bottom: 28px; }
+    .section-title { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; letter-spacing: -0.025em; margin: 0 0 4px; }
+    .section-sub { font-size: 0.78rem; color: #475569; }
+
+    /* Divider */
+    .divider-v { width: 1px; height: 18px; background: rgba(255,255,255,0.07); flex-shrink: 0; }
   </style>
 </head>
-<body class="custom-scrollbar antialiased">
+<body>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useCallback } = React;
 
-    const DEFAULT_APPLICATIONS = [
-      {
-        job_id: "job_101",
-        title: "Software Engineer, ML Infra (Junior & New Grad)",
-        company: "NewsBreak",
-        location: "San Francisco, CA",
-        apply_url: "https://www.linkedin.com/jobs/view/4445545449",
-        career_url: "https://www.google.com/search?q=NewsBreak+careers",
-        match_score: 100,
-        status: "Approved",
-        tailored_summary: "Siddharth Bhople is a Master's student in CS at Rochester Institute of Technology with extensive experience in machine learning pipelines, cloud governance, and multi-agent AI systems.",
-        matched_keywords: ["Python", "TensorFlow", "PyTorch", "AWS", "Machine Learning"],
-        pdf_path: "output_resumes/Siddharth_Bhople_Resume.pdf",
-        updated_at: new Date().toISOString()
-      }
-    ];
+    // ─────────────────────────────────────────────────────────
+    // Utility helpers
+    // ─────────────────────────────────────────────────────────
+    function relativeTime(iso) {
+      if (!iso) return '—';
+      const diff = Date.now() - new Date(iso).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1)  return 'just now';
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      const d = Math.floor(h / 24);
+      if (d < 7)  return `${d}d ago`;
+      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
 
+    function exactDate(iso) {
+      if (!iso) return 'N/A';
+      return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function scoreColor(score) {
+      if (!score || score === 0) return '#475569';
+      if (score >= 90) return '#10b981';
+      if (score >= 70) return '#6366f1';
+      if (score >= 50) return '#f59e0b';
+      return '#ef4444';
+    }
+
+    const STATUS_CONFIG = {
+      'New':          { cls: 'badge-new',          dot: '#38bdf8',  label: 'New' },
+      'Reviewing':    { cls: 'badge-reviewing',    dot: '#a5b4fc',  label: 'Reviewing' },
+      'Applied':      { cls: 'badge-applied',      dot: '#34d399',  label: 'Applied' },
+      'Interviewing': { cls: 'badge-interviewing', dot: '#fbbf24',  label: 'Interviewing' },
+      'Offer':        { cls: 'badge-offer',        dot: '#c4b5fd',  label: 'Offer' },
+      'Rejected':     { cls: 'badge-rejected',     dot: '#f87171',  label: 'Rejected' },
+    };
+    const ALL_STATUSES = ['New', 'Reviewing', 'Applied', 'Interviewing', 'Offer', 'Rejected'];
+
+    // ─────────────────────────────────────────────────────────
+    // StatusBadge
+    // ─────────────────────────────────────────────────────────
+    function StatusBadge({ status }) {
+      const cfg = STATUS_CONFIG[status] || STATUS_CONFIG['New'];
+      return (
+        <span class={`badge ${cfg.cls}`}>
+          <span class="badge-dot" style={{ background: cfg.dot }}></span>
+          {cfg.label}
+        </span>
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // StatusPicker (dropdown from badge click)
+    // ─────────────────────────────────────────────────────────
+    function StatusPicker({ currentStatus, onSelect }) {
+      const [open, setOpen] = useState(false);
+      return (
+        <div class="status-picker-wrapper">
+          {open && (
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 140 }}
+              onClick={() => setOpen(false)}
+            />
+          )}
+          <button class="status-picker-badge" onClick={() => setOpen(o => !o)}>
+            <StatusBadge status={currentStatus} />
+          </button>
+          {open && (
+            <div class="status-dropdown">
+              {ALL_STATUSES.map(s => (
+                <button
+                  key={s}
+                  class={`status-dropdown-item ${s === currentStatus ? 'selected' : ''}`}
+                  onClick={() => { onSelect(s); setOpen(false); }}
+                >
+                  <StatusBadge status={s} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // App root
+    // ─────────────────────────────────────────────────────────
     function App() {
-      const [activeTab, setActiveTab] = useState("datasheet");
-      const [viewMode, setViewMode] = useState("table"); // "table" or "kanban"
-      const [applications, setApplications] = useState(DEFAULT_APPLICATIONS);
-      const [insights, setInsights] = useState({});
-      const [loading, setLoading] = useState(false);
-      const [searchQuery, setSearchQuery] = useState("");
-      const [statusFilter, setStatusFilter] = useState("All");
-      const [isDiscoveryModalOpen, setIsDiscoveryModalOpen] = useState(false);
-      const [selectedJob, setSelectedJob] = useState(null);
-      const [discoveryStatus, setDiscoveryStatus] = useState({ status: "idle", message: "Ready to discover jobs", last_run: null });
+      const [activeTab,         setActiveTab]         = useState('datasheet');
+      const [applications,      setApplications]      = useState([]);
+      const [insights,          setInsights]          = useState({});
+      const [searchQuery,       setSearchQuery]       = useState('');
+      const [statusFilter,      setStatusFilter]      = useState('All');
+      const [dateFilter,        setDateFilter]        = useState('all');
+      const [selectedJob,       setSelectedJob]       = useState(null);
+      const [isDiscoveryOpen,   setIsDiscoveryOpen]   = useState(false);
+      const [discoveryStatus,   setDiscoveryStatus]   = useState({ status: 'idle', message: '', last_run: null });
 
-      // Fetch discovery status
+      // ── Data fetching ──────────────────────────────────────
       const fetchDiscoveryStatus = async () => {
         try {
-          const res = await fetch("/api/discovery-status");
-          if (res.ok) {
-            const data = await res.json();
-            setDiscoveryStatus(data);
-          }
-        } catch (e) {}
+          const r = await fetch('/api/discovery-status');
+          if (r.ok) setDiscoveryStatus(await r.json());
+        } catch (_) {}
       };
 
-      const handleRunDiscovery = async (config) => {
-        const providersStr = (config && config.providers) ? config.providers : "linkedin,simplify,greenhouse,lever,ashby,workday";
-        const limitNum = (config && config.limit) ? config.limit : 3;
-
-        setDiscoveryStatus({ 
-          status: "running", 
-          message: `Launching discovery engine across ${providersStr.split(',').length} job boards...`, 
-          last_run: new Date().toLocaleTimeString() 
-        });
-
-        try {
-          await fetch("/api/trigger-discovery", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ limit: limitNum, providers: providersStr })
-          });
-        } catch (e) {
-          setDiscoveryStatus({ status: "error", message: "Failed to connect to discovery server." });
-        }
-      };
-
-      // Fetch live data from serve API
-      const fetchLiveData = async () => {
+      const fetchLiveData = useCallback(async () => {
         try {
           fetchDiscoveryStatus();
-          // Fetch persistent applications store
-          const [appsRes, insightsRes] = await Promise.all([
-            fetch("/api/applications").catch(() => null),
-            fetch("/api/insights").catch(() => null)
+          const [appsRes, insRes] = await Promise.all([
+            fetch('/api/applications').catch(() => null),
+            fetch('/api/insights').catch(() => null),
           ]);
-
-          let appsData = (appsRes && appsRes.ok) ? await appsRes.json() : [];
-          let insightsData = (insightsRes && insightsRes.ok) ? await insightsRes.json() : {};
-
-          if (Array.isArray(appsData) && appsData.length > 0) {
-            setApplications(appsData);
+          if (appsRes && appsRes.ok) {
+            const data = await appsRes.json();
+            if (Array.isArray(data)) setApplications(data);
           }
-          if (insightsData) {
-            setInsights(insightsData);
-          }
-        } catch (e) {
-          console.error("Live data load error", e);
-        }
-      };
-
-      const str = (val) => String(val || "");
+          if (insRes && insRes.ok) setInsights(await insRes.json());
+        } catch (_) {}
+      }, []);
 
       useEffect(() => {
         fetchLiveData();
-        const interval = setInterval(fetchLiveData, 3000);
-        return () => clearInterval(interval);
-      }, []);
+        const t = setInterval(fetchLiveData, 3000);
+        return () => clearInterval(t);
+      }, [fetchLiveData]);
 
+      // ── Handlers ───────────────────────────────────────────
       const handleStatusChange = async (jobId, newStatus) => {
-        // Optimistic UI Update
-        setApplications(prev => prev.map(app => (str(app.job_id) === str(jobId) || str(app.id) === str(jobId)) ? { ...app, status: newStatus } : app));
-
+        setApplications(prev =>
+          prev.map(a =>
+            (a.job_id === jobId || a.id === jobId)
+              ? { ...a, status: newStatus, updated_at: new Date().toISOString() }
+              : a
+          )
+        );
         try {
-          await fetch("/api/update-status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ job_id: jobId, status: newStatus })
+          await fetch('/api/update-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: jobId, status: newStatus }),
           });
-        } catch (e) {
-          console.error("Status update error", e);
-        }
+        } catch (_) {}
       };
 
       const handleDeleteJob = async (jobId) => {
-        // Instant Optimistic Removal from UI
-        setApplications(prev => prev.filter(app => str(app.job_id) !== str(jobId) && str(app.id) !== str(jobId)));
-
+        setApplications(prev => prev.filter(a => a.job_id !== jobId && a.id !== jobId));
+        if (selectedJob && (selectedJob.job_id === jobId || selectedJob.id === jobId)) setSelectedJob(null);
         try {
-          await fetch("/api/delete-application", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ job_id: jobId })
+          await fetch('/api/delete-application', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: jobId }),
           });
-        } catch (e) {
-          console.error("Delete job error", e);
+        } catch (_) {}
+      };
+
+      const handleRunDiscovery = async (config) => {
+        const providers = config && config.providers ? config.providers : 'linkedin,simplify,greenhouse,lever,ashby,workday';
+        const limit     = config && config.limit     ? config.limit     : 3;
+        setDiscoveryStatus({ status: 'running', message: `Scanning ${providers.split(',').length} job boards…`, last_run: null });
+        try {
+          await fetch('/api/trigger-discovery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ limit, providers }),
+          });
+        } catch (_) {
+          setDiscoveryStatus({ status: 'error', message: 'Discovery could not start — check server logs.' });
         }
       };
 
-      const filteredApps = applications.filter(app => {
-        const matchesSearch = searchQuery === "" || 
-          (app.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (app.company || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (app.matched_keywords || []).some(k => k.toLowerCase().includes(searchQuery.toLowerCase()));
-        
-        const matchesStatus = statusFilter === "All" || (app.status || "Approved") === statusFilter;
-        return matchesSearch && matchesStatus;
+      // ── Filtering & sorting ───────────────────────────────
+      const applyDateFilter = (app) => {
+        if (dateFilter === 'all') return true;
+        const raw = app.created_at || app.updated_at;
+        if (!raw) return false;
+        const t = new Date(raw).getTime();
+        const now = Date.now();
+        if (dateFilter === 'today') return new Date(t).toDateString() === new Date(now).toDateString();
+        if (dateFilter === 'week')  return t >= now - 7  * 86400000;
+        if (dateFilter === 'month') return t >= now - 30 * 86400000;
+        return true;
+      };
+
+      const filtered = applications
+        .filter(a => statusFilter === 'All' || (a.status || 'New') === statusFilter)
+        .filter(a => applyDateFilter(a))
+        .filter(a => {
+          if (!searchQuery) return true;
+          const q = searchQuery.toLowerCase();
+          return [a.title, a.company, a.location, a.source].join(' ').toLowerCase().includes(q);
+        })
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+      const counts = {};
+      ALL_STATUSES.forEach(s => {
+        counts[s] = applications.filter(a => (a.status || 'New') === s).length;
       });
 
-      return (
-        <div class="flex h-screen overflow-hidden">
-          {/* SIDEBAR NAVIGATION */}
-          <aside class="w-64 bg-slate-900/90 border-r border-slate-800/80 flex flex-col justify-between p-4 z-20">
-            <div>
-              {/* Brand Header */}
-              <div class="flex items-center gap-3 px-3 py-3 mb-6">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-indigo-600 to-cyan-400 flex items-center justify-center font-extrabold text-white text-lg shadow-lg shadow-indigo-500/25">
-                  ⚡
-                </div>
-                <div>
-                  <h1 class="font-bold text-base text-white leading-tight tracking-tight">JobApply AI</h1>
-                  <div class="flex items-center gap-1.5 mt-0.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span class="text-xs text-slate-400 font-medium">Pipeline Active</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation Menu */}
-              <nav class="space-y-1">
-                {[
-                  { id: "datasheet", label: "Job Applications", icon: "📑", badge: applications.length },
-                  { id: "dashboard", label: "Analytics Overview", icon: "📊" },
-                  { id: "insights", label: "Skill Gap Insights", icon: "📈" },
-                  { id: "resumes", label: "ATS Resume Files", icon: "📄" }
-                ].map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    class={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-semibold text-sm transition-all duration-200 tactile-btn ${
-                      activeTab === item.id 
-                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-600/25 border border-indigo-500/30' 
-                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                    }`}
-                  >
-                    <div class="flex items-center gap-3">
-                      <span class="text-lg">{item.icon}</span>
-                      {item.label}
-                    </div>
-                    {item.badge != null && (
-                      <span class={`px-2 py-0.5 text-xs rounded-full font-bold ${activeTab === item.id ? 'bg-indigo-900/80 text-white' : 'bg-slate-800 text-slate-400'}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* Candidate Profile Widget */}
-            <div class="p-3.5 bg-slate-800/60 rounded-2xl border border-slate-700/60 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-indigo-700 flex items-center justify-center font-bold text-sm text-white shadow-md">
-                SB
-              </div>
-              <div class="overflow-hidden">
-                <div class="text-sm font-bold text-white truncate">Siddharth Bhople</div>
-                <div class="text-xs text-slate-400 truncate">MS CS Candidate @ RIT</div>
-              </div>
-            </div>
-          </aside>
-
-          {/* MAIN CONTENT AREA */}
-          <main class="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
-            {loading ? (
-              <div class="flex items-center justify-center h-full">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
-              </div>
-            ) : (
-              <>
-                {activeTab === 'datasheet' && (
-                  <DatasheetTab 
-                    applications={filteredApps} 
-                    totalCount={applications.length}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    statusFilter={statusFilter}
-                    setStatusFilter={setStatusFilter}
-                    viewMode={viewMode}
-                    setViewMode={setViewMode}
-                    handleStatusChange={handleStatusChange}
-                    handleDeleteJob={handleDeleteJob}
-                    discoveryStatus={discoveryStatus}
-                    onOpenDiscoveryModal={() => setIsDiscoveryModalOpen(true)}
-                    setSelectedJob={setSelectedJob}
-                  />
-                )}
-                {activeTab === 'dashboard' && <DashboardOverviewTab applications={applications} />}
-                {activeTab === 'insights' && <InsightsTab insights={insights} />}
-                {activeTab === 'resumes' && <ResumesTab applications={applications} />}
-              </>
-            )}
-
-            {/* Interactive Job Discovery Provider Picker Modal */}
-            <DiscoveryModal 
-              isOpen={isDiscoveryModalOpen} 
-              onClose={() => setIsDiscoveryModalOpen(false)} 
-              onStartDiscovery={handleRunDiscovery} 
-              discoveryStatus={discoveryStatus} 
-            />
-
-            {/* Slide-over Detail Drawer */}
-            {selectedJob && (
-              <DetailModal job={selectedJob} onClose={() => setSelectedJob(null)} handleStatusChange={handleStatusChange} handleDeleteJob={handleDeleteJob} />
-            )}
-          </main>
-        </div>
-      );
-    }
-
-    /* =========================================================================
-       DATASHEET TAB — Standard Enterprise Table & Kanban with Playful Status Pills
-       ========================================================================= */
-    function DatasheetTab({ 
-      applications, 
-      totalCount, 
-      searchQuery, 
-      setSearchQuery, 
-      statusFilter, 
-      setStatusFilter, 
-      viewMode, 
-      setViewMode, 
-      handleStatusChange,
-      handleDeleteJob,
-      discoveryStatus,
-      onOpenDiscoveryModal,
-      setSelectedJob 
-    }) {
-      const statuses = ["All", "Approved", "Applied", "Not Applied", "Interviewing", "Offer", "Rejected"];
-
-      const approvedCount = applications.filter(a => (a.status || "Approved") === "Approved").length;
-      const appliedCount = applications.filter(a => a.status === "Applied").length;
-      const interviewCount = applications.filter(a => a.status === "Interviewing").length;
-
-      return (
-        <div class="space-y-6">
-          {/* Header Banner & Stats Row */}
-          <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div>
-              <h2 class="text-2xl font-extrabold text-white tracking-tight flex items-center gap-3">
-                Job Application Datasheet
-                <span class="px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-bold rounded-full">
-                  {totalCount} Total Tracked
-                </span>
-              </h2>
-              <p class="text-slate-400 text-sm mt-1">
-                Standard structured database for verified job matches, company career links, and tailored ATS PDF resumes.
-              </p>
-            </div>
-
-            {/* Action Bar: 1-Click Run Discovery + View Switcher */}
-            <div class="flex flex-wrap items-center gap-3">
-              {/* 1-Click Run Discovery Action Button */}
-              <button
-                onClick={onOpenDiscoveryModal}
-                disabled={discoveryStatus.status === 'running'}
-                class={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition shadow-lg tactile-btn ${
-                  discoveryStatus.status === 'running'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse cursor-wait'
-                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-emerald-500/25 border border-emerald-400/30'
-                }`}
-              >
-                {discoveryStatus.status === 'running' ? (
-                  <>
-                    <span class="animate-spin font-bold text-sm">⚡</span>
-                    <span>Discovering Jobs...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>🚀</span>
-                    <span>Discover Jobs Now</span>
-                  </>
-                )}
-              </button>
-
-              {/* View Switcher (Table Datasheet vs Kanban Board) */}
-              <div class="flex items-center bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl">
-                <button
-                  onClick={() => setViewMode("table")}
-                  class={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-xs transition tactile-btn ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-                >
-                  <span>📋</span> Datasheet Table
-                </button>
-                <button
-                  onClick={() => setViewMode("kanban")}
-                  class={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-xs transition tactile-btn ${viewMode === 'kanban' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-                >
-                  <span>📌</span> Kanban Board
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Live Discovery Status Notification Banner */}
-          {discoveryStatus.message && discoveryStatus.status !== 'idle' && (
-            <div class={`px-4 py-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
-              discoveryStatus.status === 'running' ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 animate-pulse' :
-              discoveryStatus.status === 'completed' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' :
-              discoveryStatus.status === 'error' ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' :
-              'bg-slate-900/60 text-slate-400 border-slate-800'
-            }`}>
-              <div class="flex items-center gap-2">
-                <span>{discoveryStatus.status === 'running' ? '⚡' : discoveryStatus.status === 'completed' ? '✅' : 'ℹ️'}</span>
-                <span>{discoveryStatus.message}</span>
-              </div>
-              {discoveryStatus.last_run && <span class="text-slate-500 font-mono text-[10px]">Last run: {discoveryStatus.last_run}</span>}
-            </div>
-          )}
-
-          {/* Quick Metrics Bar */}
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: "Approved (Ready)", val: approvedCount, icon: "🎯", color: "from-indigo-500/10 to-indigo-600/5 text-indigo-400 border-indigo-500/20" },
-              { label: "Submitted (Applied)", val: appliedCount, icon: "✅", color: "from-emerald-500/10 to-emerald-600/5 text-emerald-400 border-emerald-500/20" },
-              { label: "Interviews Active", val: interviewCount, icon: "💼", color: "from-amber-500/10 to-amber-600/5 text-amber-400 border-amber-500/20" },
-              { label: "Average Fit Score", val: "94%", icon: "⭐", color: "from-cyan-500/10 to-cyan-600/5 text-cyan-400 border-cyan-500/20" }
-            ].map((m, idx) => (
-              <div key={idx} class={`glass-card p-4 rounded-xl border bg-gradient-to-br ${m.color} flex items-center justify-between`}>
-                <div>
-                  <div class="text-xs font-semibold text-slate-400">{m.label}</div>
-                  <div class="text-xl font-extrabold text-white mt-1">{m.val}</div>
-                </div>
-                <div class="text-2xl">{m.icon}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Search & Status Filter Controls */}
-          <div class="glass-panel p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Search Input */}
-            <div class="relative flex-1 w-full">
-              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">🔍</span>
-              <input
-                type="text"
-                placeholder="Search job title, company, or skills..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-medium"
-              />
-            </div>
-
-            {/* Status Filter Segmented Button Bar */}
-            <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto custom-scrollbar pb-1 md:pb-0">
-              {statuses.map(st => (
-                <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  class={`px-3 py-2 rounded-xl text-xs font-bold transition-all tactile-btn whitespace-nowrap ${
-                    statusFilter === st 
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
-                      : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* DATASHEET TABLE VIEW */}
-          {viewMode === "table" ? (
-            <div class="glass-panel rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
-              <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                  <thead>
-                    <tr class="bg-slate-900/90 border-b border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400">
-                      <th class="py-4 px-6">Company & Role Title</th>
-                      <th class="py-4 px-4">Location</th>
-                      <th class="py-4 px-4 text-center">Fit Score</th>
-                      <th class="py-4 px-4">Application Links</th>
-                      <th class="py-4 px-4">Tailored Resume</th>
-                      <th class="py-4 px-6 text-center">Status Action Bar (No Dropdowns)</th>
-                      <th class="py-4 px-4 text-center">Manage</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-800/60 text-sm">
-                    {applications.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" class="text-center py-12 text-slate-500 font-medium">
-                          No job records found matching your filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      applications.map((app) => (
-                        <tr key={app.job_id || app.id} class="hover:bg-slate-800/40 transition-colors group">
-                          {/* Role & Company */}
-                          <td class="py-4 px-6">
-                            <div class="flex items-center gap-3">
-                              <div class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-indigo-400 text-sm shadow-sm group-hover:border-indigo-500/50">
-                                {(app.company || "C")[0]}
-                              </div>
-                              <div>
-                                <button onClick={() => setSelectedJob(app)} class="font-bold text-white hover:text-indigo-400 text-left transition leading-snug">
-                                  {app.title}
-                                </button>
-                                <div class="text-xs text-slate-400 font-medium mt-0.5">{app.company}</div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Location */}
-                          <td class="py-4 px-4 text-xs font-medium text-slate-300">
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-900/80 rounded-lg border border-slate-800">
-                              📍 {app.location || "Remote / USA"}
-                            </span>
-                          </td>
-
-                          {/* Fit Match Score */}
-                          <td class="py-4 px-4 text-center">
-                            <span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg font-extrabold text-xs">
-                              {app.match_score || app.score || 92}%
-                            </span>
-                          </td>
-
-                          {/* Action Links */}
-                          <td class="py-4 px-4">
-                            <div class="flex items-center gap-2">
-                              <a 
-                                href={app.apply_url || app.url || "#"} 
-                                target="_blank"
-                                class="px-3 py-1.5 bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white border border-indigo-500/30 rounded-lg font-semibold text-xs transition tactile-btn flex items-center gap-1"
-                              >
-                                🔗 Direct Apply
-                              </a>
-                              <a 
-                                href={app.career_url || `https://www.google.com/search?q=${encodeURIComponent(app.company)}+careers`} 
-                                target="_blank"
-                                class="px-3 py-1.5 bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 rounded-lg font-semibold text-xs transition tactile-btn flex items-center gap-1"
-                              >
-                                🏢 Career Portal
-                              </a>
-                            </div>
-                          </td>
-
-                          {/* Tailored Resume PDF */}
-                          <td class="py-4 px-4 text-xs font-semibold">
-                            <a 
-                              href="/output_resumes/Siddharth_Bhople_Resume.pdf" 
-                              target="_blank"
-                              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg hover:bg-emerald-500 hover:text-white transition tactile-btn"
-                            >
-                              📄 Resume PDF
-                            </a>
-                          </td>
-
-                          {/* Tactile Segmented Status Buttons (NO DROPDOWNS!) */}
-                          <td class="py-4 px-6">
-                            <SegmentedStatusControl 
-                              currentStatus={app.status || "Approved"} 
-                              onSelect={(newSt) => handleStatusChange(app.job_id || app.id, newSt)} 
-                            />
-                          </td>
-
-                          {/* Delete Action */}
-                          <td class="py-4 px-4 text-center">
-                            <button
-                              onClick={() => handleDeleteJob(app.job_id || app.id)}
-                              title="Delete entry from datasheet"
-                              class="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-600 hover:text-white border border-rose-500/20 rounded-xl font-bold text-xs transition tactile-btn"
-                            >
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            /* KANBAN BOARD VIEW */
-            <KanbanBoardView applications={applications} handleStatusChange={handleStatusChange} setSelectedJob={setSelectedJob} />
-          )}
-        </div>
-      );
-    }
-
-    /* =========================================================================
-       TACTILE SEGMENTED STATUS CONTROL — Playful Status Pills (Zero Dropdowns!)
-       ========================================================================= */
-    function SegmentedStatusControl({ currentStatus, onSelect }) {
-      const options = [
-        { label: "Approved", icon: "🎯", color: "bg-indigo-600 text-white shadow-indigo-600/40" },
-        { label: "Applied", icon: "✅", color: "bg-emerald-600 text-white shadow-emerald-600/40" },
-        { label: "Interviewing", icon: "💼", color: "bg-amber-600 text-white shadow-amber-600/40" },
-        { label: "Rejected", icon: "❌", color: "bg-rose-600 text-white shadow-rose-600/40" }
+      // ── Navigation ────────────────────────────────────────
+      const navItems = [
+        { id: 'datasheet', label: 'Job Tracker' },
+        { id: 'dashboard', label: 'Overview' },
+        { id: 'insights',  label: 'Insights' },
+        { id: 'resumes',   label: 'Resumes' },
       ];
 
       return (
-        <div class="inline-flex items-center bg-slate-900/90 border border-slate-800 p-1 rounded-xl gap-1">
-          {options.map(opt => {
-            const isActive = currentStatus === opt.label;
-            return (
-              <button
-                key={opt.label}
-                onClick={() => onSelect(opt.label)}
-                title={`Set status to ${opt.label}`}
-                class={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all tactile-btn flex items-center gap-1 ${
-                  isActive 
-                    ? `${opt.color} shadow-md scale-105` 
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
-                }`}
-              >
-                <span>{opt.icon}</span>
-                <span class="hidden sm:inline">{opt.label}</span>
-              </button>
-            );
-          })}
+        <div class="app-shell">
+          {/* Sidebar */}
+          <aside class="sidebar">
+            <div class="nav-brand">
+              <div class="nav-brand-name">JobApply</div>
+              <div class="nav-brand-sub">AI Recruitment Tracker</div>
+            </div>
+
+            <nav style={{ flex: 1 }}>
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  class={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(item.id)}
+                >
+                  <span class={`nav-dot ${activeTab === item.id ? 'active' : ''}`} />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16, paddingLeft: 10 }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b' }}>Siddharth Bhople</div>
+              <div style={{ fontSize: '0.68rem', color: '#1e293b', marginTop: 2 }}>MS Computer Science · RIT · 2027</div>
+            </div>
+          </aside>
+
+          {/* Main */}
+          <main class="main-content">
+            {activeTab === 'datasheet' && (
+              <DatasheetTab
+                applications={filtered}
+                totalCount={applications.length}
+                counts={counts}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                dateFilter={dateFilter}
+                setDateFilter={setDateFilter}
+                handleStatusChange={handleStatusChange}
+                handleDeleteJob={handleDeleteJob}
+                discoveryStatus={discoveryStatus}
+                onOpenDiscovery={() => setIsDiscoveryOpen(true)}
+                onSelectJob={setSelectedJob}
+              />
+            )}
+            {activeTab === 'dashboard' && (
+              <OverviewTab applications={applications} counts={counts} />
+            )}
+            {activeTab === 'insights' && (
+              <InsightsTab insights={insights} applications={applications} />
+            )}
+            {activeTab === 'resumes' && <ResumesTab />}
+          </main>
+
+          {/* Modals */}
+          {selectedJob && (
+            <DetailModal
+              job={selectedJob}
+              onClose={() => setSelectedJob(null)}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDeleteJob}
+            />
+          )}
+          <DiscoveryModal
+            isOpen={isDiscoveryOpen}
+            onClose={() => setIsDiscoveryOpen(false)}
+            onStart={handleRunDiscovery}
+            discoveryStatus={discoveryStatus}
+          />
         </div>
       );
     }
 
-    /* =========================================================================
-       KANBAN BOARD VIEW
-       ========================================================================= */
-    function KanbanBoardView({ applications, handleStatusChange, setSelectedJob }) {
-      const cols = ["Approved", "Applied", "Interviewing", "Offer", "Rejected"];
+    // ─────────────────────────────────────────────────────────
+    // Datasheet Tab
+    // ─────────────────────────────────────────────────────────
+    function DatasheetTab({
+      applications, totalCount, counts,
+      searchQuery, setSearchQuery,
+      statusFilter, setStatusFilter,
+      dateFilter, setDateFilter,
+      handleStatusChange, handleDeleteJob,
+      discoveryStatus, onOpenDiscovery, onSelectJob,
+    }) {
+      const statusTabs = ['All', ...ALL_STATUSES];
+      const dateOpts   = [
+        { id: 'all',   label: 'All Time' },
+        { id: 'today', label: 'Today' },
+        { id: 'week',  label: 'This Week' },
+        { id: 'month', label: 'This Month' },
+      ];
+
+      const isRunning = discoveryStatus.status === 'running';
 
       return (
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4 custom-scrollbar">
-          {cols.map(col => {
-            const colApps = applications.filter(a => (a.status || "Approved") === col);
-            return (
-              <div key={col} class="glass-panel border border-slate-800/80 rounded-2xl p-4 flex flex-col min-w-[250px]">
-                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
-                  <h3 class="font-extrabold text-sm text-slate-200 flex items-center gap-2">
-                    <span class={`w-2.5 h-2.5 rounded-full ${col === 'Applied' ? 'bg-emerald-400' : col === 'Approved' ? 'bg-indigo-400' : col === 'Interviewing' ? 'bg-amber-400' : col === 'Offer' ? 'bg-cyan-400' : 'bg-rose-500'}`}></span>
-                    {col}
-                  </h3>
-                  <span class="px-2.5 py-0.5 bg-slate-800 text-xs font-bold text-slate-300 rounded-full">{colApps.length}</span>
-                </div>
+        <div>
+          {/* Page header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+            <div class="section-header" style={{ marginBottom: 0 }}>
+              <h1 class="section-title">Job Tracker</h1>
+              <p class="section-sub">
+                {totalCount} total — sorted by most recently discovered
+              </p>
+            </div>
 
-                <div class="space-y-3 flex-1">
-                  {colApps.map(app => (
-                    <div key={app.job_id || app.id} class="glass-card p-4 rounded-xl flex flex-col justify-between group">
-                      <div>
-                        <div class="flex justify-between items-start mb-1">
-                          <button onClick={() => setSelectedJob(app)} class="font-bold text-sm text-white hover:text-indigo-400 text-left transition leading-snug">
-                            {app.title}
-                          </button>
-                          <span class="text-xs font-extrabold text-indigo-400 ml-1">{app.match_score || 92}%</span>
-                        </div>
-                        <div class="text-xs text-slate-400 font-medium mb-1">{app.company}</div>
-                        <div class="text-[11px] text-slate-500 mb-3">{app.location || "Remote"}</div>
-                      </div>
-
-                      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                        <a href={app.apply_url || "#"} target="_blank" class="text-xs font-bold text-indigo-400 hover:underline">Apply ➔</a>
-                        <SegmentedStatusControl currentStatus={app.status || "Approved"} onSelect={(st) => handleStatusChange(app.job_id || app.id, st)} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-
-    /* =========================================================================
-       DETAIL MODAL — Expanded Job Information & Resume Highlights
-       ========================================================================= */
-    function DetailModal({ job, onClose, handleStatusChange, handleDeleteJob }) {
-      return (
-        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div class="glass-panel border border-slate-700/80 p-6 rounded-2xl max-w-2xl w-full shadow-2xl space-y-6">
-            <div class="flex justify-between items-start border-b border-slate-800 pb-4">
-              <div>
-                <span class="px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-extrabold rounded-full">
-                  {job.match_score || 92}% AI Recruiter Match
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {isRunning && (
+                <span class="pulsing" style={{ fontSize: '0.73rem', color: '#fbbf24', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', padding: '6px 14px', borderRadius: 7, fontWeight: 500 }}>
+                  Scanning job boards…
                 </span>
-                <h3 class="text-xl font-bold text-white mt-2">{job.title}</h3>
-                <div class="text-sm text-slate-400 font-medium">{job.company} &bull; {job.location || "Remote"}</div>
-              </div>
-              <button onClick={onClose} class="text-slate-400 hover:text-white text-xl font-bold p-1">✕</button>
-            </div>
-
-            {/* Tailored Summary */}
-            {job.tailored_summary && (
-              <div>
-                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tailored Resume Professional Summary</h4>
-                <p class="text-sm text-slate-200 italic bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 leading-relaxed">
-                  "{job.tailored_summary}"
-                </p>
-              </div>
-            )}
-
-            {/* Matched Keywords */}
-            {job.matched_keywords && job.matched_keywords.length > 0 && (
-              <div>
-                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Matched Key Technical Skills</h4>
-                <div class="flex flex-wrap gap-2">
-                  {job.matched_keywords.map((kw, i) => (
-                    <span key={i} class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-bold">
-                      ✓ {kw}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Action Bar */}
-            <div class="pt-4 border-t border-slate-800 flex items-center justify-between flex-wrap gap-3">
-              <div class="flex items-center gap-3">
-                <a href={job.apply_url || "#"} target="_blank" class="px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-500 transition tactile-btn">
-                  🔗 Open Apply Link
-                </a>
-                <a href={job.career_url || "#"} target="_blank" class="px-4 py-2 bg-slate-800 text-slate-300 font-bold text-xs rounded-xl hover:bg-slate-700 transition tactile-btn">
-                  🏢 Career Portal
-                </a>
-                {handleDeleteJob && (
-                  <button onClick={() => { handleDeleteJob(job.job_id || job.id); onClose(); }} class="px-4 py-2 bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold text-xs rounded-xl hover:bg-rose-600 hover:text-white transition tactile-btn">
-                    🗑️ Delete Entry
-                  </button>
-                )}
-              </div>
-              <SegmentedStatusControl currentStatus={job.status || "Approved"} onSelect={(st) => { handleStatusChange(job.job_id || job.id, st); onClose(); }} />
+              )}
+              {discoveryStatus.status === 'completed' && discoveryStatus.last_run && (
+                <span style={{ fontSize: '0.7rem', color: '#334155' }}>
+                  Last run: {discoveryStatus.last_run}
+                </span>
+              )}
+              {discoveryStatus.status === 'error' && (
+                <span style={{ fontSize: '0.7rem', color: '#f87171' }}>
+                  Error — check server logs
+                </span>
+              )}
+              <button class="btn btn-primary" onClick={onOpenDiscovery} disabled={isRunning}>
+                {isRunning ? 'Running…' : 'Run Discovery'}
+              </button>
             </div>
           </div>
+
+          {/* Status stat cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 20 }}>
+            {ALL_STATUSES.map(s => {
+              const cfg = STATUS_CONFIG[s];
+              return (
+                <div
+                  key={s}
+                  onClick={() => setStatusFilter(statusFilter === s ? 'All' : s)}
+                  style={{
+                    padding: '14px 16px', borderRadius: 9, cursor: 'pointer',
+                    background: statusFilter === s ? `rgba(${s === 'New' ? '14,165,233' : s === 'Reviewing' ? '99,102,241' : s === 'Applied' ? '16,185,129' : s === 'Interviewing' ? '245,158,11' : s === 'Offer' ? '139,92,246' : '239,68,68'},0.1)` : 'rgba(15,23,42,0.5)',
+                    border: `1px solid ${statusFilter === s ? cfg.dot + '44' : 'rgba(255,255,255,0.06)'}`,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: statusFilter === s ? cfg.dot : '#94a3b8', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                    {counts[s] || 0}
+                  </div>
+                  <div style={{ fontSize: '0.67rem', color: '#475569', marginTop: 5, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {s}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Filter / search bar */}
+          <div class="card" style={{ padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 3 }}>
+              {statusTabs.map(s => (
+                <button key={s} class={`filter-pill ${statusFilter === s ? 'active' : ''}`} onClick={() => setStatusFilter(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            <div class="divider-v" />
+
+            <div style={{ display: 'flex', gap: 3 }}>
+              {dateOpts.map(opt => (
+                <button key={opt.id} class={`filter-pill ${dateFilter === opt.id ? 'active' : ''}`} onClick={() => setDateFilter(opt.id)}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginLeft: 'auto' }}>
+              <input
+                type="text"
+                class="input-text"
+                placeholder="Search by role, company or location…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{ width: 280 }}
+              />
+            </div>
+          </div>
+
+          {/* Data table */}
+          <div class="card" style={{ overflow: 'hidden' }}>
+            {applications.length === 0 ? (
+              <div class="empty-state">
+                <div class="empty-state-icon">
+                  <div style={{ width: 18, height: 18, border: '2px solid rgba(99,102,241,0.5)', borderRadius: 3 }} />
+                </div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#64748b' }}>No results</div>
+                <div style={{ fontSize: '0.78rem', color: '#334155', maxWidth: 340, lineHeight: 1.7 }}>
+                  {statusFilter !== 'All' || dateFilter !== 'all' || searchQuery
+                    ? 'No jobs match your current filters. Try adjusting the status, date range, or search term.'
+                    : 'Click "Run Discovery" above to scan job boards for matching roles. New results will appear here automatically.'}
+                </div>
+              </div>
+            ) : (
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 130 }}>Status</th>
+                    <th style={{ width: 170 }}>Company</th>
+                    <th>Role</th>
+                    <th style={{ width: 80 }}>Match</th>
+                    <th style={{ width: 100 }}>Source</th>
+                    <th style={{ width: 110 }}>Discovered</th>
+                    <th style={{ width: 110 }}>Updated</th>
+                    <th style={{ width: 130 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applications.map(app => {
+                    const score = app.match_score || 0;
+                    const id    = app.job_id || app.id;
+                    return (
+                      <tr key={id}>
+                        <td>
+                          <StatusPicker
+                            currentStatus={app.status || 'New'}
+                            onSelect={s => handleStatusChange(id, s)}
+                          />
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.8rem' }}>{app.company}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#334155', marginTop: 2 }}>{app.location || 'Remote'}</div>
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => onSelectJob(app)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                          >
+                            <span style={{ fontSize: '0.8rem', color: '#818cf8', fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: 'rgba(129,140,248,0.35)' }}>
+                              {app.title}
+                            </span>
+                          </button>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ fontSize: '0.77rem', fontWeight: 600, color: scoreColor(score), fontFamily: 'JetBrains Mono, monospace' }}>
+                              {score > 0 ? `${score}%` : '—'}
+                            </div>
+                            <div class="score-bar">
+                              <div class="score-fill" style={{ width: `${score}%`, background: scoreColor(score) }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#475569', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 4 }}>
+                            {app.source || 'LinkedIn'}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.76rem', color: '#64748b' }} title={exactDate(app.created_at)}>
+                            {relativeTime(app.created_at)}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.76rem', color: '#334155' }} title={exactDate(app.updated_at)}>
+                            {relativeTime(app.updated_at)}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <a href={app.apply_url || '#'} target="_blank" class="btn btn-link" style={{ textDecoration: 'none', fontSize: '0.73rem' }}>
+                              Apply
+                            </a>
+                            <button class="btn btn-danger" onClick={() => handleDeleteJob(id)}>
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {applications.length > 0 && (
+            <div style={{ marginTop: 10, fontSize: '0.7rem', color: '#1e293b', textAlign: 'right' }}>
+              Showing {applications.length} of {totalCount} total records
+            </div>
+          )}
         </div>
       );
     }
 
-    /* =========================================================================
-       DASHBOARD OVERVIEW TAB
-       ========================================================================= */
-    function DashboardOverviewTab({ applications }) {
+    // ─────────────────────────────────────────────────────────
+    // Overview Tab
+    // ─────────────────────────────────────────────────────────
+    function OverviewTab({ applications, counts }) {
       const total = applications.length;
-      const approved = applications.filter(a => (a.status || "Approved") === "Approved").length;
-      const applied = applications.filter(a => a.status === "Applied").length;
-      const interviewing = applications.filter(a => a.status === "Interviewing").length;
+      const thisWeek = applications.filter(a => {
+        const t = new Date(a.created_at || 0).getTime();
+        return Date.now() - t < 7 * 86400000;
+      }).length;
+
+      const metrics = [
+        { label: 'Total Tracked',      value: total,                 sub: 'All time' },
+        { label: 'Discovered This Week', value: thisWeek,            sub: 'Last 7 days' },
+        { label: 'Applications Sent',   value: counts.Applied || 0,  sub: 'Status: Applied' },
+        { label: 'Active Interviews',   value: counts.Interviewing || 0, sub: 'Status: Interviewing' },
+      ];
 
       return (
-        <div class="space-y-8">
-          <div>
-            <h2 class="text-2xl font-extrabold text-white">Analytics Overview</h2>
-            <p class="text-slate-400 text-sm">Pipeline metrics and recruiter fit analysis</p>
+        <div>
+          <div class="section-header">
+            <h1 class="section-title">Overview</h1>
+            <p class="section-sub">Pipeline metrics and activity summary</p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[
-              { label: "Total Applications", val: total, icon: "📑", color: "from-indigo-500/20 to-indigo-600/5 text-indigo-400 border-indigo-500/30" },
-              { label: "Approved Queue", val: approved, icon: "🎯", color: "from-cyan-500/20 to-cyan-600/5 text-cyan-400 border-cyan-500/30" },
-              { label: "Submitted (Applied)", val: applied, icon: "✅", color: "from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/30" },
-              { label: "Interviewing", val: interviewing, icon: "💼", color: "from-amber-500/20 to-amber-600/5 text-amber-400 border-amber-500/30" }
-            ].map((k, i) => (
-              <div key={i} class={`glass-card p-6 rounded-2xl border bg-gradient-to-br ${k.color}`}>
-                <div class="flex items-center justify-between">
-                  <span class="text-2xl">{k.icon}</span>
-                  <span class="text-xs font-bold px-2 py-1 bg-slate-800/80 rounded-md">Live</span>
-                </div>
-                <div class="text-3xl font-extrabold text-white mt-4">{k.val}</div>
-                <div class="text-xs font-semibold text-slate-400 mt-1">{k.label}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+            {metrics.map((m, i) => (
+              <div key={i} class="card" style={{ padding: '20px 22px' }}>
+                <div style={{ fontSize: '2.1rem', fontWeight: 700, color: '#f1f5f9', fontVariantNumeric: 'tabular-nums' }}>{m.value}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginTop: 5 }}>{m.label}</div>
+                <div style={{ fontSize: '0.68rem', color: '#334155', marginTop: 2 }}>{m.sub}</div>
               </div>
             ))}
           </div>
-        </div>
-      );
-    }
 
-    /* =========================================================================
-       SKILL GAP INSIGHTS TAB
-       ========================================================================= */
-    function InsightsTab({ insights }) {
-      return (
-        <div class="space-y-6">
-          <div>
-            <h2 class="text-2xl font-extrabold text-white">AI Skill Gap & Market Intelligence</h2>
-            <p class="text-slate-400 text-sm">Targeted skill recommendations to maximize interview callbacks</p>
-          </div>
-          <div class="glass-panel p-6 rounded-2xl border border-slate-800">
-            <h3 class="font-bold text-lg text-white mb-4">Recommended Market Skills</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { skill: "Docker & Containerization", uplift: "+14%", reason: "Requested in 85% of ML Infra roles" },
-                { skill: "Kubernetes Orchestration", uplift: "+18%", reason: "High demand across senior systems engineering" },
-                { skill: "Ray / Distributed Training", uplift: "+12%", reason: "Key for large-scale LLM training pipelines" }
-              ].map((s, i) => (
-                <div key={i} class="bg-slate-900/90 border border-slate-800 p-4 rounded-xl">
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="font-bold text-white text-sm">{s.skill}</span>
-                    <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-md">{s.uplift} Callbacks</span>
+          <div class="card" style={{ padding: 24 }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 20 }}>
+              Pipeline Breakdown
+            </div>
+            {ALL_STATUSES.map(s => {
+              const count = counts[s] || 0;
+              const pct = total > 0 ? Math.round(count / total * 100) : 0;
+              const cfg = STATUS_CONFIG[s];
+              return (
+                <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <div style={{ width: 100, fontSize: '0.77rem', color: '#475569', fontWeight: 500 }}>{s}</div>
+                  <div style={{ flex: 1, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 999, background: cfg.dot, width: `${pct}%`, transition: 'width 0.4s ease' }} />
                   </div>
-                  <p class="text-xs text-slate-400">{s.reason}</p>
+                  <div style={{ width: 32, fontSize: '0.77rem', color: '#64748b', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{count}</div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       );
     }
 
-    /* =========================================================================
-       RESUMES TAB
-       ========================================================================= */
-    function ResumesTab({ applications }) {
+    // ─────────────────────────────────────────────────────────
+    // Insights Tab
+    // ─────────────────────────────────────────────────────────
+    function InsightsTab({ insights, applications }) {
+      const allKeywords = applications.flatMap(a => a.matched_keywords || []);
+      const freq = {};
+      allKeywords.forEach(k => { freq[k] = (freq[k] || 0) + 1; });
+      const topSkills = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      const maxFreq = topSkills[0] ? topSkills[0][1] : 1;
+
       return (
-        <div class="space-y-6">
-          <div>
-            <h2 class="text-2xl font-extrabold text-white">ATS Vector PDF Resume Library</h2>
-            <p class="text-slate-400 text-sm">Compiled single-page ATS-compliant PDF resumes matching LaTeX Computer Modern typography</p>
+        <div>
+          <div class="section-header">
+            <h1 class="section-title">Skill Insights</h1>
+            <p class="section-sub">Skills most frequently matched across your discovered job descriptions</p>
           </div>
-          <div class="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-2xl font-bold">📄</div>
-              <div>
-                <h3 class="font-bold text-base text-white">Siddharth_Bhople_Resume.pdf</h3>
-                <p class="text-xs text-slate-400">Master Verified ATS Resume • Compiled with ReportLab & Playwright</p>
+
+          <div class="card" style={{ padding: 24 }}>
+            {topSkills.length === 0 ? (
+              <div class="empty-state" style={{ padding: '40px 24px' }}>
+                <div style={{ fontSize: '0.85rem', color: '#475569' }}>No skill data yet — run discovery first.</div>
               </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', fontSize: '0.67rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#334155', paddingBottom: 12, paddingRight: 16 }}>Skill</th>
+                    <th style={{ textAlign: 'left', fontSize: '0.67rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#334155', paddingBottom: 12 }}>Frequency across matched roles</th>
+                    <th style={{ textAlign: 'right', fontSize: '0.67rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#334155', paddingBottom: 12, paddingLeft: 16, width: 60 }}>Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topSkills.map(([skill, count], i) => (
+                    <tr key={i}>
+                      <td style={{ padding: '10px 16px 10px 0', borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '0.8rem', color: '#e2e8f0', fontWeight: 500, whiteSpace: 'nowrap' }}>{skill}</td>
+                      <td style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                        <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.05)' }}>
+                          <div style={{ height: '100%', borderRadius: 999, background: '#6366f1', width: `${Math.round(count / maxFreq * 100)}%` }} />
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 0 10px 16px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', fontSize: '0.8rem', color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>{count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Resumes Tab
+    // ─────────────────────────────────────────────────────────
+    function ResumesTab() {
+      return (
+        <div>
+          <div class="section-header">
+            <h1 class="section-title">Resumes</h1>
+            <p class="section-sub">ATS-optimized PDF resumes compiled per application</p>
+          </div>
+
+          <div class="card" style={{ padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.85rem' }}>Siddharth_Bhople_Resume.pdf</div>
+              <div style={{ fontSize: '0.73rem', color: '#334155', marginTop: 3 }}>Master ATS resume — compiled with ReportLab</div>
             </div>
-            <a href="/output_resumes/Siddharth_Bhople_Resume.pdf" target="_blank" class="px-5 py-2.5 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-500 transition tactile-btn">
-              Download PDF Resume
+            <a href="/output_resumes/Siddharth_Bhople_Resume.pdf" target="_blank" class="btn btn-primary" style={{ textDecoration: 'none' }}>
+              Download PDF
             </a>
           </div>
         </div>
       );
     }
 
-    /* =========================================================================
-       DISCOVERY MODAL — Interactive Job Provider Picker & Batch Configurator
-       ========================================================================= */
-    function DiscoveryModal({ isOpen, onClose, onStartDiscovery, discoveryStatus }) {
-      const [selectedProviders, setSelectedProviders] = useState(["linkedin", "simplify", "greenhouse", "lever", "ashby", "workday"]);
-      const [limit, setLimit] = useState(3);
+    // ─────────────────────────────────────────────────────────
+    // Detail Modal
+    // ─────────────────────────────────────────────────────────
+    function DetailModal({ job, onClose, onStatusChange, onDelete }) {
+      const id = job.job_id || job.id;
+
+      return (
+        <div class="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
+          <div class="modal-box">
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div>
+                {job.match_score > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <span style={{ fontSize: '0.7rem', color: '#6366f1', fontWeight: 600, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.22)', padding: '3px 10px', borderRadius: 5 }}>
+                      {job.match_score}% AI Match Score
+                    </span>
+                  </div>
+                )}
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f1f5f9', marginBottom: 4, lineHeight: 1.3 }}>{job.title}</div>
+                <div style={{ fontSize: '0.8rem', color: '#475569' }}>{job.company} · {job.location || 'Remote'}</div>
+                <div style={{ marginTop: 8 }}>
+                  <StatusPicker currentStatus={job.status || 'New'} onSelect={s => onStatusChange(id, s)} />
+                </div>
+              </div>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155', fontSize: '1.4rem', lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+            </div>
+
+            {/* Tailored Summary */}
+            {job.tailored_summary && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: '0.67rem', fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>AI Tailored Summary</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '12px 16px', borderRadius: 8, lineHeight: 1.75, fontStyle: 'italic' }}>
+                  {job.tailored_summary}
+                </div>
+              </div>
+            )}
+
+            {/* Matched Skills */}
+            {job.matched_keywords && job.matched_keywords.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: '0.67rem', fontWeight: 600, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Matched Skills</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {job.matched_keywords.map((kw, i) => (
+                    <span key={i} style={{ fontSize: '0.73rem', fontWeight: 500, color: '#34d399', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)', padding: '3px 10px', borderRadius: 5 }}>
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dates */}
+            <div style={{ display: 'flex', gap: 24, marginBottom: 20, fontSize: '0.73rem', color: '#334155' }}>
+              <div><span style={{ fontWeight: 600 }}>Discovered:</span> {exactDate(job.created_at)}</div>
+              <div><span style={{ fontWeight: 600 }}>Last updated:</span> {exactDate(job.updated_at)}</div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 8, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <a href={job.apply_url || '#'} target="_blank" class="btn btn-primary" style={{ textDecoration: 'none' }}>
+                Open Application
+              </a>
+              {job.career_url && (
+                <a href={job.career_url} target="_blank" class="btn btn-ghost" style={{ textDecoration: 'none' }}>
+                  Career Page
+                </a>
+              )}
+              <button class="btn btn-danger" style={{ marginLeft: 'auto' }} onClick={() => { onDelete(id); onClose(); }}>
+                Delete Entry
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Discovery Configuration Modal
+    // ─────────────────────────────────────────────────────────
+    function DiscoveryModal({ isOpen, onClose, onStart, discoveryStatus }) {
+      const [selectedProviders, setSelectedProviders] = useState(['linkedin', 'simplify', 'greenhouse', 'lever', 'ashby', 'workday']);
+      const [limit, setLimit]                         = useState(3);
 
       if (!isOpen) return null;
 
-      const ALL_PROVIDERS = [
-        { id: "linkedin", name: "LinkedIn Jobs", icon: "💼", badge: "Live API" },
-        { id: "simplify", name: "Simplify Jobs", icon: "⚡", badge: "New Grad" },
-        { id: "greenhouse", name: "Greenhouse Boards", icon: "🌱", badge: "Direct API" },
-        { id: "lever", name: "Lever Board", icon: "⚙️", badge: "Direct API" },
-        { id: "ashby", name: "Ashby HQ", icon: "🏢", badge: "Direct API" },
-        { id: "workday", name: "Workday Portal", icon: "🏛️", badge: "Enterprise" }
+      const providers = [
+        { id: 'linkedin',   label: 'LinkedIn Jobs',   tag: 'Live API' },
+        { id: 'simplify',   label: 'Simplify Jobs',   tag: 'New Grad' },
+        { id: 'greenhouse', label: 'Greenhouse',      tag: 'Direct API' },
+        { id: 'lever',      label: 'Lever',           tag: 'Direct API' },
+        { id: 'ashby',      label: 'Ashby HQ',        tag: 'Direct API' },
+        { id: 'workday',    label: 'Workday',         tag: 'Enterprise' },
       ];
 
-      const toggleProvider = (id) => {
+      const toggle = (id) => {
         if (selectedProviders.includes(id)) {
           if (selectedProviders.length === 1) return;
           setSelectedProviders(selectedProviders.filter(p => p !== id));
@@ -873,68 +925,60 @@
         }
       };
 
-      const toggleSelectAll = () => {
-        if (selectedProviders.length === ALL_PROVIDERS.length) {
-          setSelectedProviders(["linkedin", "simplify"]);
-        } else {
-          setSelectedProviders(ALL_PROVIDERS.map(p => p.id));
-        }
-      };
-
-      const handleSubmit = () => {
-        onStartDiscovery({
-          providers: selectedProviders.join(","),
-          limit: limit
-        });
-        onClose();
-      };
+      const allSelected = selectedProviders.length === providers.length;
 
       return (
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div class="glass-panel w-full max-w-lg rounded-3xl border border-slate-700/80 p-6 shadow-2xl space-y-6">
-            {/* Modal Header */}
-            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div class="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
+          <div class="modal-box">
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22, paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <div>
-                <h3 class="text-xl font-extrabold text-white flex items-center gap-2">
-                  <span>🚀</span> Launch Job Discovery Engine
-                </h3>
-                <p class="text-xs text-slate-400 mt-1">Select target job boards and set search batch limits.</p>
+                <div style={{ fontSize: '0.97rem', fontWeight: 700, color: '#f1f5f9' }}>Configure Discovery</div>
+                <div style={{ fontSize: '0.76rem', color: '#475569', marginTop: 3 }}>Select job boards and set the number of results per provider</div>
               </div>
-              <button onClick={onClose} class="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155', fontSize: '1.4rem', lineHeight: 1 }}>×</button>
             </div>
 
-            {/* Provider Picker */}
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <label class="text-xs font-bold uppercase tracking-wider text-slate-300">Target Job Boards & API Sources</label>
-                <button onClick={toggleSelectAll} class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
-                  {selectedProviders.length === ALL_PROVIDERS.length ? "Deselect Extra" : "Select All (6)"}
+            {/* Provider selection */}
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: '0.67rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Job Boards
+                </span>
+                <button
+                  onClick={() => setSelectedProviders(allSelected ? ['linkedin'] : providers.map(p => p.id))}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', fontSize: '0.73rem', fontWeight: 600 }}
+                >
+                  {allSelected ? 'Deselect all' : 'Select all'}
                 </button>
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
-                {ALL_PROVIDERS.map(p => {
-                  const isSelected = selectedProviders.includes(p.id);
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {providers.map(p => {
+                  const active = selectedProviders.includes(p.id);
                   return (
                     <button
                       key={p.id}
-                      type="button"
-                      onClick={() => toggleProvider(p.id)}
-                      class={`p-3 rounded-2xl border text-left transition-all tactile-btn flex items-center justify-between ${
-                        isSelected 
-                          ? 'bg-indigo-600/20 border-indigo-500/50 text-white shadow-md shadow-indigo-600/10' 
-                          : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                      }`}
+                      onClick={() => toggle(p.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 14px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+                        background: active ? 'rgba(99,102,241,0.09)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${active ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                        transition: 'all 0.13s',
+                      }}
                     >
-                      <div class="flex items-center gap-2.5">
-                        <span class="text-lg">{p.icon}</span>
-                        <div>
-                          <div class="text-xs font-bold">{p.name}</div>
-                          <div class="text-[10px] text-slate-500 font-medium">{p.badge}</div>
-                        </div>
+                      <div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: active ? '#a5b4fc' : '#64748b' }}>{p.label}</div>
+                        <div style={{ fontSize: '0.67rem', color: '#334155', marginTop: 2 }}>{p.tag}</div>
                       </div>
-                      <div class={`w-5 h-5 rounded-lg border flex items-center justify-center text-xs ${isSelected ? 'bg-indigo-600 border-indigo-400 text-white font-bold' : 'border-slate-700'}`}>
-                        {isSelected ? "✓" : ""}
+                      <div style={{
+                        width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                        background: active ? '#6366f1' : 'transparent',
+                        border: active ? 'none' : '1px solid #1e293b',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {active && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1 }}>✓</span>}
                       </div>
                     </button>
                   );
@@ -942,42 +986,38 @@
               </div>
             </div>
 
-            {/* Limit Picker */}
-            <div>
-              <label class="text-xs font-bold uppercase tracking-wider text-slate-300 block mb-2">Search Batch Limit per Provider</label>
-              <div class="grid grid-cols-3 gap-3">
-                {[
-                  { num: 2, label: "Quick Scan" },
-                  { num: 5, label: "Standard" },
-                  { num: 10, label: "Deep Search" }
-                ].map(l => (
+            {/* Results per provider */}
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ fontSize: '0.67rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+                Results per provider
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ n: 2, label: 'Quick' }, { n: 5, label: 'Standard' }, { n: 10, label: 'Deep' }].map(opt => (
                   <button
-                    key={l.num}
-                    type="button"
-                    onClick={() => setLimit(l.num)}
-                    class={`p-3 rounded-xl border text-center transition tactile-btn ${
-                      limit === l.num 
-                        ? 'bg-indigo-600 border-indigo-500 text-white font-bold shadow-md' 
-                        : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                    }`}
+                    key={opt.n}
+                    onClick={() => setLimit(opt.n)}
+                    style={{
+                      flex: 1, padding: '10px 8px', borderRadius: 8, cursor: 'pointer',
+                      background: limit === opt.n ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${limit === opt.n ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                      transition: 'all 0.13s',
+                    }}
                   >
-                    <div class="text-sm font-extrabold">{l.num} Jobs</div>
-                    <div class="text-[10px] text-slate-400 mt-0.5">{l.num * selectedProviders.length} Max Total</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: limit === opt.n ? '#a5b4fc' : '#475569' }}>{opt.n}</div>
+                    <div style={{ fontSize: '0.67rem', color: '#334155', marginTop: 3 }}>{opt.label} &middot; {opt.n * selectedProviders.length} max total</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
-              <button onClick={onClose} class="px-5 py-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs font-bold transition">
-                Cancel
-              </button>
+            {/* Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button class="btn btn-ghost" onClick={onClose}>Cancel</button>
               <button
-                onClick={handleSubmit}
-                class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-500/25 transition tactile-btn flex items-center gap-2"
+                class="btn btn-primary"
+                onClick={() => { onStart({ providers: selectedProviders.join(','), limit }); onClose(); }}
               >
-                <span>⚡</span> Start Job Search ({selectedProviders.length} Boards)
+                Start Discovery ({selectedProviders.length} board{selectedProviders.length !== 1 ? 's' : ''})
               </button>
             </div>
           </div>

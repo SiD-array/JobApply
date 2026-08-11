@@ -1,0 +1,128 @@
+{
+  "personal_info": {
+    "first_name": "Siddharth",
+    "last_name": "Bhople",
+    "email": "sid.work0403@gmail.com",
+    "phone": "585-625-8123",
+    "location": "Rochester, NY",
+    "linkedin": "https://linkedin.com/in/siddharth-bhople/",
+    "github": "https://github.com/SiD-array"
+  },
+  "summary": "AI Engineering Intern and Computer Science Master's student with extensive experience in machine learning pipelines, multi-agent systems, data processing, and cloud governance.",
+  "core_skills": [
+    "Python",
+    "Java",
+    "JavaScript",
+    "C/C++",
+    "C#/.NET",
+    "SQL",
+    "Scikit-learn",
+    "TensorFlow",
+    "PyTorch",
+    "XGBoost",
+    "NumPy",
+    "Pandas",
+    "FastAPI",
+    "React",
+    "Node.js",
+    "AWS",
+    "PostgreSQL",
+    "Firebase",
+    "MySQL",
+    "Git"
+  ],
+  "experience": [
+    {
+      "company": "BSH Hausger\u00e4te GmbH (Bosch Group)",
+      "title": "DAAD RISE Professional Scholar AI Engineering Intern (Pre-Development)",
+      "location": "Berlin, Germany",
+      "start_date": "2026-05",
+      "end_date": "Present",
+      "bullet_points": [
+        "Engineered filtering and merge logic processing 1,000+ TDMS files (avg. 1.5GB each) across multi-campaign lab experiments, validating model performance to within +/-500g RMSE target.",
+        "Automated the TDMS processing pipeline in Python (Pandas, openpyxl), replacing 2 manual MATLAB workflows and cutting processing time by ~75% (2 hours to 30 minutes).",
+        "Fine-tuned a MobileNetV2 model in TensorFlow to classify 25 fabric types into 5 functional wash categories, improving validation accuracy from 66.4% to 71.5% via early-stopping optimization.",
+        "Developing regression and PCA-based feature reduction pipeline across 4+ sensor channels to support Remaining Useful Life (RUL) modeling for embedded laundry appliance diagnostics."
+      ]
+    },
+    {
+      "company": "Verzeo EduTech",
+      "title": "Machine Learning Intern",
+      "location": "Indore, India",
+      "start_date": "2021-05",
+      "end_date": "2021-07",
+      "bullet_points": [
+        "Implemented ML classification models (Naive Bayes, SVM, Logistic Regression) with 71% accuracy\u201415% above the untrained baseline on a real-world text classification dataset.",
+        "Streamlined preprocessing pipeline, reducing sparse features by 30% to improve model training efficiency.",
+        "Created a content-based movie recommendation system processing 5,000+ titles and delivering top-5 personalized results in under 1 second per query.",
+        "Developed interactive dashboards to analyze user behavior and feature correlations, reducing reporting effort by 50%."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Autonomous Cloud Governance",
+      "technologies": [
+        "AWS",
+        "LocalStack",
+        "Ollama",
+        "Boto3"
+      ],
+      "bullet_points": [
+        "Accomplished 0.00% overhead in agent execution time as measured by 0.06ms handshake and budget approval process, by implementing ultra-low overhead Accountant Agent's handshake and budget approval process",
+        "Achieved $0.0267 in real total savings as measured by verifiable savings on a single task pass, by proactively routing low-complexity tasks to frugal models using Complexity-Aware Dynamic Routing",
+        "Ensured near-zero latency as measured by 0.06ms Accountant Agent's handshake and budget approval process, by designing and implementing Agentic Circuit Breakers and dynamic model routing to prevent cloud bill shock in autonomous workflows"
+      ],
+      "date": "2026-03"
+    },
+    {
+      "name": "RNA-Seq Biomarker Discovery",
+      "technologies": [
+        "TCGA RNA-Seq",
+        "Logistic Regression",
+        "gProfiler pathway enrichment"
+      ],
+      "bullet_points": [
+        "Accomplished 100% F1-Macro Score as measured by model performance metrics, by implementing a Class-Weighted Logistic Regression model to classify five distinct cancer subtypes (BRCA, COAD, KIRC, LUAD, PRAD) from TCGA RNA-Seq data",
+        "Identified 50 HGNC-verified biomarkers as measured by model interpretability and pathway enrichment analysis, by analyzing the coefficients of a Logistic Regression model and validating the findings via gProfiler pathway enrichment",
+        "Achieved high-confidence biomarker panel validation as measured by gProfiler pathway enrichment analysis, by overcoming the challenge of mapping custom dataset gene IDs to official HGNC Symbols and confirming statistical over-representation in DNA-binding Transcription Factor Activity and Syntaxin Binding/Vesicular Transport pathways"
+      ],
+      "date": "2025-12"
+    },
+    {
+      "name": "Real-Time Stock Analysis Dashboard",
+      "technologies": [
+        "React",
+        "FastAPI",
+        "Firebase",
+        "scikit-learn",
+        "XGBoost",
+        "LightGBM",
+        "TensorFlow"
+      ],
+      "bullet_points": [
+        "Accomplished real-time stock market analysis and machine learning-based price predictions as measured by an average MAPE of 5.13% and R\u00b2 of -1.02, by developing and deploying a React and FastAPI-powered dashboard with interactive data visualization and technical indicators.",
+        "Achieved accurate anomaly detection and news sentiment analysis as measured by a Z-score-based detection algorithm and VADER Sentiment Analyzer, by integrating Yahoo Finance and Firebase-powered watchlist features into the StockView application.",
+        "Improved model evaluation framework as measured by a 9.10% reduction in MAPE and a 2.93 improvement in R\u00b2, by designing and implementing a reproducible backtesting pipeline using scikit-learn, XGBoost, LightGBM, and TensorFlow (CNN) on historical data."
+      ],
+      "date": "2025-07"
+    }
+  ],
+  "education": [
+    {
+      "degree": "Master of Science in Computer Science",
+      "institution": "Rochester Institute of Technology",
+      "location": "Rochester, NY",
+      "gpa": "3.82",
+      "start_date": "2024-08",
+      "graduation_year": "2027"
+    },
+    {
+      "degree": "Bachelor of Technology in Computer Science",
+      "institution": "Institute of Engineering and Science, IPS Academy",
+      "location": "Indore, India",
+      "start_date": "2020-12",
+      "graduation_year": "2024"
+    }
+  ]
+}
