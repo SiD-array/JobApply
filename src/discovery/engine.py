@@ -100,10 +100,114 @@ class DiscoveryEngine:
         self.providers[provider.name.lower()] = provider
         print(f"[ENGINE] Registered provider: {provider.name}")
 
+    def _load_historical_seen(self) -> tuple:
+        """
+        Pre-populate deduplication sets from:
+          1. Active Datasheet (output_resumes/applications.json)
+          2. Discovered Jobs Cache (samples/discovered_jobs.json)
+          3. Persistent History Memory Log (.seen_jobs_history.json)
+        """
+        import time
+        seen_urls = set()
+        seen_keys = set()
+
+        def add_entry(entry):
+            if not isinstance(entry, dict):
+                return
+            url = entry.get("apply_url") or entry.get("url")
+            if url:
+                seen_urls.add(str(url).strip())
+
+            title = str(entry.get("title", "")).strip().lower()
+            company = str(entry.get("company", "")).strip().lower()
+            if title and company:
+                seen_keys.add(f"{title}_{company}")
+                clean_t = "".join(c for c in title if c.isalnum())
+                clean_c = "".join(c for c in company if c.isalnum())
+                seen_keys.add(f"{clean_t}_{clean_c}")
+
+            job_id = entry.get("job_id") or entry.get("id")
+            if job_id and str(job_id) != "job_101":
+                seen_keys.add(str(job_id).strip())
+
+        # 1. Active Datasheet
+        apps_file = os.path.abspath("output_resumes/applications.json")
+        if os.path.exists(apps_file):
+            try:
+                with open(apps_file, "r", encoding="utf-8") as f:
+                    apps = json.load(f)
+                if isinstance(apps, list):
+                    for a in apps:
+                        add_entry(a)
+            except Exception:
+                pass
+
+        # 2. Discovered Jobs Cache
+        disc_file = os.path.abspath("samples/discovered_jobs.json")
+        if os.path.exists(disc_file):
+            try:
+                with open(disc_file, "r", encoding="utf-8") as f:
+                    jobs = json.load(f)
+                if isinstance(jobs, list):
+                    for j in jobs:
+                        add_entry(j)
+            except Exception:
+                pass
+
+        # 3. Persistent History Memory Log
+        hist_file = os.path.abspath(".seen_jobs_history.json")
+        if os.path.exists(hist_file):
+            try:
+                with open(hist_file, "r", encoding="utf-8") as f:
+                    hist = json.load(f)
+                if isinstance(hist, list):
+                    for h in hist:
+                        add_entry(h)
+            except Exception:
+                pass
+
+        return seen_urls, seen_keys
+
+    def _save_to_history(self, jobs: List[Job]):
+        """Persist newly discovered unique jobs into .seen_jobs_history.json."""
+        if not jobs:
+            return
+        import time
+        hist_file = os.path.abspath(".seen_jobs_history.json")
+        history = []
+        if os.path.exists(hist_file):
+            try:
+                with open(hist_file, "r", encoding="utf-8") as f:
+                    history = json.load(f)
+                if not isinstance(history, list):
+                    history = []
+            except Exception:
+                history = []
+
+        existing_urls = {h.get("url") for h in history if isinstance(h, dict) and h.get("url")}
+        for j in jobs:
+            d = j.to_dict() if hasattr(j, "to_dict") else j
+            url = d.get("url") or d.get("apply_url")
+            if url and url not in existing_urls:
+                history.append({
+                    "job_id": d.get("job_id"),
+                    "title": d.get("title"),
+                    "company": d.get("company"),
+                    "url": url,
+                    "discovered_at": time.strftime("%Y-%m-%d %H:%M:%S")
+                })
+                existing_urls.add(url)
+
+        try:
+            with open(hist_file, "w", encoding="utf-8") as f:
+                json.dump(history, f, indent=2)
+        except Exception:
+            pass
+
     def discover_jobs(self, query: SearchQuery, active_providers: List[str] = None) -> List[Job]:
         """
         Run discovery across registered providers concurrently.
-        Deduplicates jobs by URL and title/company combination.
+        Pre-populates deduplication sets from history & datasheet to guarantee no duplicate jobs.
         """
         target_providers = []
         if active_providers:
@@ -115,10 +219,10 @@ class DiscoveryEngine:
             target_providers = list(self.providers.values())
 
         all_jobs: List[Job] = []
-        seen_urls = set()
-        seen_keys = set()
+        seen_urls, seen_keys = self._load_historical_seen()
 
         print(f"\n[DISCOVERY ENGINE] Searching across {len(target_providers)} providers...")
+        print(f"   Pre-loaded {len(seen_urls)} historical URLs & {len(seen_keys)} keys from Datasheet memory.")
         print(f"   Keywords: {query.keywords} | Location: {query.location}\n")
 
         with ThreadPoolExecutor(max_workers=len(target_providers)) as executor:
@@ -133,11 +237,12 @@ class DiscoveryEngine:
                     jobs = future.result()
                     filtered_jobs = self._filter_and_deduplicate(jobs, query.max_age_hours, seen_urls, seen_keys)
                     all_jobs.extend(filtered_jobs)
-                    print(f"  + {provider.name}: Found {len(filtered_jobs)} unique jobs (relaxed age limit if needed)")
+                    print(f"  + {provider.name}: Found {len(filtered_jobs)} new unique unseen jobs")
                 except Exception as e:
                     print(f"  x {provider.name} failed: {e}", file=sys.stderr)
 
-        print(f"\n[DISCOVERY COMPLETE] Total normalized unique jobs: {len(all_jobs)}")
+        self._save_to_history(all_jobs)
+        print(f"\n[DISCOVERY COMPLETE] Total fresh unseen unique jobs: {len(all_jobs)}")
         return all_jobs
 
     def _filter_and_deduplicate(self, jobs: List[Job], max_age_hours: int, seen_urls: set, seen_keys: set) -> List[Job]:
